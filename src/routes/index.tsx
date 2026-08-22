@@ -1,24 +1,70 @@
+import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { NewProductForm } from "@/components/NewProductForm";
+import { Processing } from "@/components/Processing";
+import { ProductDashboard } from "@/components/ProductDashboard";
+import { generateListing } from "@/lib/ai/product.functions";
+import type { Listing, ProductInput } from "@/lib/ai/types";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Anúncio Fácil — Gere anúncios de produto com IA" },
+      {
+        name: "description",
+        content:
+          "Envie a foto e o nome do produto e receba SKU, título, descrição, palavras-chave, ficha técnica e imagens prontos para copiar.",
+      },
+      { property: "og:title", content: "Anúncio Fácil — Gere anúncios de produto com IA" },
+      {
+        property: "og:description",
+        content:
+          "Foto + nome básico viram um anúncio profissional completo, editável e pronto para copiar. Sem inventar informações.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
+type Stage = "form" | "processing" | "result";
+
 function Index() {
+  const [stage, setStage] = useState<Stage>("form");
+  const [input, setInput] = useState<ProductInput | null>(null);
+  const [listing, setListing] = useState<Listing | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async (data: ProductInput) => {
+    setInput(data);
+    setStage("processing");
+    setError(null);
+    try {
+      const result = await generateListing({ data });
+      setListing(result as Listing);
+      setStage("result");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao gerar o anúncio.");
+    }
+  };
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <main className="min-h-screen bg-background px-4 py-10">
+      <header className="mx-auto mb-8 flex w-full max-w-4xl items-center justify-between">
+        <span className="text-sm font-semibold tracking-tight">
+          Anúncio<span className="text-primary"> Fácil</span>
+        </span>
+        <span className="text-xs text-muted-foreground">Precisão &gt; completude &gt; criatividade</span>
+      </header>
+
+      {stage === "form" ? <NewProductForm onSubmit={run} /> : null}
+      {stage === "processing" ? (
+        <Processing error={error} onRetry={() => (input ? run(input) : setStage("form"))} />
+      ) : null}
+      {stage === "result" && input && listing ? (
+        <ProductDashboard input={input} listing={listing} setListing={setListing} onBack={() => setStage("form")} />
+      ) : null}
+    </main>
   );
 }
