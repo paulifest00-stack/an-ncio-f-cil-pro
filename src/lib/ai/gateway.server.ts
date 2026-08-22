@@ -51,7 +51,7 @@ export async function chat(messages: ChatMessage[], model: string = MODELS.reaso
 export function parseJson<T>(raw: string): T {
   let text = raw.trim();
   const fence = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fence) text = fence[1].trim();
+  if (fence?.[1]) text = fence[1].trim();
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start > 0 || end < text.length - 1) text = text.slice(start, end + 1);
