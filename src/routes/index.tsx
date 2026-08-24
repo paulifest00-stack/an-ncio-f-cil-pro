@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { AiCreditsBadge } from "@/components/AiCreditsBadge";
 import { NewProductForm } from "@/components/NewProductForm";
 import { Processing } from "@/components/Processing";
 import { ProductDashboard } from "@/components/ProductDashboard";
 import { generateListing } from "@/lib/ai/product.functions";
 import type { Listing, ProductInput } from "@/lib/ai/types";
+import { registerUsage } from "@/lib/usage";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -42,6 +44,7 @@ function Index() {
     setError(null);
     try {
       const result = await generateListing({ data });
+      registerUsage("texto");
       setListing(result as Listing);
       setStage("result");
     } catch (e) {
@@ -51,11 +54,11 @@ function Index() {
 
   return (
     <main className="min-h-screen bg-background px-4 py-10">
-      <header className="mx-auto mb-8 flex w-full max-w-4xl items-center justify-between">
+      <header className="mx-auto mb-8 flex w-full max-w-4xl items-center justify-between gap-4">
         <span className="text-sm font-semibold tracking-tight">
           Anúncio<span className="text-primary"> Fácil</span>
         </span>
-        <span className="text-xs text-muted-foreground">Precisão &gt; completude &gt; criatividade</span>
+        <AiCreditsBadge />
       </header>
 
       {stage === "form" ? <NewProductForm onSubmit={run} /> : null}
