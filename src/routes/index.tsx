@@ -6,6 +6,7 @@ import { Processing } from "@/components/Processing";
 import { ProductDashboard } from "@/components/ProductDashboard";
 import { generateListing } from "@/lib/ai/product.functions";
 import type { Listing, ProductInput } from "@/lib/ai/types";
+import { registerUsage } from "@/lib/usage";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -43,6 +44,7 @@ function Index() {
     setError(null);
     try {
       const result = await generateListing({ data });
+      registerUsage("texto");
       setListing(result as Listing);
       setStage("result");
     } catch (e) {

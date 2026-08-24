@@ -9,6 +9,7 @@ import { CopyBlock } from "@/components/CopyBlock";
 import type { Field, ImageBrief, Listing, ListingSection, ProductInput } from "@/lib/ai/types";
 import { NAO_IDENTIFICADO } from "@/lib/ai/types";
 import { generateAdImage, regenerateSection } from "@/lib/ai/product.functions";
+import { registerUsage } from "@/lib/usage";
 
 const SOURCE_LABEL: Record<Field["source"], string> = {
   usuario: "Informado por você",
@@ -72,6 +73,7 @@ export function ProductDashboard({
     setError(null);
     try {
       const result = await regenerateSection({ data: { section, input, listing } });
+      registerUsage("texto");
       patch(result as Partial<Listing>);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao regenerar.");
@@ -84,6 +86,7 @@ export function ProductDashboard({
     setImageState((s) => ({ ...s, [index]: { loading: true } }));
     try {
       const url = await generateAdImage({ data: { prompt: brief.prompt, photoDataUrl: input.photoDataUrl } });
+      registerUsage("imagem");
       setImageState((s) => ({ ...s, [index]: { loading: false, url } }));
     } catch (e) {
       setImageState((s) => ({
