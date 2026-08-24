@@ -22,6 +22,7 @@ export interface ProductInput {
   units?: string;
   packaging?: string;
   other?: string;
+  cachedIdentificacao?: Identificacao;
 }
 
 /** PASSO 1 — identificação exata do produto a partir da foto. */

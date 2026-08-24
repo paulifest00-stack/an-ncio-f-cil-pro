@@ -2,12 +2,13 @@ import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera,
+  CheckCircle2,
   ChevronDown,
-  ImagePlus,
   Info,
+  Loader2,
   PackagePlus,
   Sparkles,
-  UploadCloud,
+  Wand2,
   X,
   Zap,
 } from "lucide-react";
@@ -16,7 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import type { ProductInput } from "@/lib/ai/types";
+import { quickScanPhoto } from "@/lib/ai/product.functions";
+import type { Identificacao, ProductInput } from "@/lib/ai/types";
 
 const MAX_SIDE = 1400;
 
@@ -50,10 +52,62 @@ export function NewProductForm({
   const [optional, setOptional] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanSuccessMsg, setScanSuccessMsg] = useState<string | null>(null);
+  const [cachedIdentificacao, setCachedIdentificacao] = useState<Identificacao | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const setField = (key: string, value: string) =>
     setOptional((prev) => ({ ...prev, [key]: value }));
+
+  const scanImage = async (compressedDataUrl: string) => {
+    setIsScanning(true);
+    setScanSuccessMsg(null);
+    try {
+      const res = await quickScanPhoto({
+        data: { photoDataUrl: compressedDataUrl },
+      });
+
+      if (res && res.sugestoes) {
+        const { basicName: autoName, brand, category, weight, packaging, ean } = res.sugestoes;
+        
+        // Preenche o nome básico se não foi preenchido manualmente
+        if (autoName) {
+          setBasicName(autoName);
+        }
+
+        // Preenche campos opcionais identificados
+        setOptional((prev) => ({
+          ...prev,
+          ...(brand ? { brand } : {}),
+          ...(category ? { category } : {}),
+          ...(weight ? { weight } : {}),
+          ...(packaging ? { packaging } : {}),
+          ...(ean ? { ean } : {}),
+        }));
+
+        // Guarda a identificação para reutilizar na geração completa sem repetir a etapa
+        if (res.identificacao) {
+          setCachedIdentificacao(res.identificacao);
+        }
+
+        if (autoName || brand) {
+          setScanSuccessMsg(
+            `Produto identificado: ${autoName || "Item lido"} ${brand ? `(Marca: ${brand})` : ""}`,
+          );
+          // Se encontrou dados extras, abre a sanfona de opcionais para o usuário conferir
+          if (brand || weight || category || ean) {
+            setShowOptional(true);
+          }
+        }
+      }
+    } catch (err) {
+      console.warn("Falha no escaneamento automático da foto:", err);
+      // Não bloqueia o usuário caso o scan rápido falhe
+    } finally {
+      setIsScanning(false);
+    }
+  };
 
   const handleFile = async (file?: File) => {
     if (!file) return;
@@ -62,8 +116,11 @@ export function NewProductForm({
       return;
     }
     try {
-      setPhoto(await fileToCompressedDataUrl(file));
+      const compressed = await fileToCompressedDataUrl(file);
+      setPhoto(compressed);
       setError(null);
+      // Executa o escaneamento inteligente automático da foto
+      void scanImage(compressed);
     } catch {
       setError("Não foi possível ler a imagem. Tente outro arquivo.");
     }
@@ -77,6 +134,12 @@ export function NewProductForm({
     }
   };
 
+  const clearPhoto = () => {
+    setPhoto(null);
+    setScanSuccessMsg(null);
+    setCachedIdentificacao(null);
+  };
+
   const submit = () => {
     if (!photo) return setError("Envie uma foto da embalagem ou produto.");
     if (!basicName.trim())
@@ -86,6 +149,7 @@ export function NewProductForm({
       photoDataUrl: photo,
       basicName: basicName.trim(),
       ...optional,
+      ...(cachedIdentificacao ? { cachedIdentificacao } : {}),
     });
   };
 
@@ -108,19 +172,19 @@ export function NewProductForm({
           <div>
             <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
               <Sparkles className="size-3.5" />
-              <span>Gerador Inteligente</span>
+              <span>Gerador Inteligente & Auto-OCR</span>
             </div>
             <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
               Criar Novo Anúncio
             </h1>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
-              Tire ou envie uma foto do produto. A IA lê a embalagem e cria tudo automaticamente.
+              Envie a foto do produto. A IA lê o rótulo, preenche o formulário e gera o anúncio completo.
             </p>
           </div>
         </div>
 
         <div className="mt-6 space-y-6">
-          {/* Campo 1: Foto com Dropzone Tátil iOS */}
+          {/* Campo 1: Foto com Dropzone Tátil iOS & Auto-Scan */}
           <div>
             <div className="mb-2.5 flex items-center justify-between">
               <Label className="text-xs font-semibold uppercase tracking-wider text-foreground">
@@ -154,11 +218,28 @@ export function NewProductForm({
                       className="max-h-64 w-auto rounded-xl object-contain shadow-md"
                     />
                   </div>
-                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/60 via-black/30 to-transparent p-3 text-white">
-                    <span className="text-xs font-medium">Foto Carregada</span>
+
+                  {/* Banner de Status de Escaneamento */}
+                  {isScanning && (
+                    <div className="absolute inset-x-0 top-0 flex items-center justify-center gap-2 bg-blue-600/90 py-2 text-xs font-semibold text-white backdrop-blur-md">
+                      <Loader2 className="size-3.5 animate-spin" />
+                      <span>Identificando texto e marca na embalagem com IA...</span>
+                    </div>
+                  )}
+
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 via-black/40 to-transparent p-3 text-white">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium">Foto Carregada</span>
+                      {cachedIdentificacao && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 backdrop-blur-xs">
+                          <CheckCircle2 className="size-3" />
+                          Auto-identificado
+                        </span>
+                      )}
+                    </div>
                     <button
                       type="button"
-                      onClick={() => setPhoto(null)}
+                      onClick={clearPhoto}
                       className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur-md transition-transform hover:scale-105 active:scale-95"
                     >
                       <X className="size-3.5" />
@@ -192,12 +273,24 @@ export function NewProductForm({
                       Clique ou arraste a foto aqui
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Formatos JPG, PNG ou WebP de alta resolução
+                      A IA lê a embalagem e preenche os campos automaticamente
                     </p>
                   </div>
                 </motion.button>
               )}
             </AnimatePresence>
+
+            {/* Aviso visual de sucesso do auto-reconhecimento */}
+            {scanSuccessMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -4 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="mt-2.5 flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs font-medium text-emerald-700 dark:text-emerald-300"
+              >
+                <Wand2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span className="truncate">{scanSuccessMsg}</span>
+              </motion.div>
+            )}
           </div>
 
           {/* Campo 2: Nome Básico com Presets Rápidos */}
@@ -246,7 +339,7 @@ export function NewProductForm({
             >
               <div className="flex items-center gap-2">
                 <PackagePlus className="size-4 text-primary" />
-                <span>Informações Adicionais (Opcional)</span>
+                <span>Informações Adicionais (Opcional / Auto-preenchidas)</span>
                 {Object.values(optional).filter(Boolean).length > 0 && (
                   <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
                     {Object.values(optional).filter(Boolean).length} preenchidos
@@ -307,6 +400,18 @@ export function NewProductForm({
                       />
                     </div>
                     <div>
+                      <Label htmlFor="weight" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                        Peso / Medida / Volume
+                      </Label>
+                      <Input
+                        id="weight"
+                        placeholder="Ex: 150ml, 1kg, 100un"
+                        value={optional["weight"] ?? ""}
+                        onChange={(e) => setField("weight", e.target.value)}
+                        className="h-9 rounded-lg text-xs"
+                      />
+                    </div>
+                    <div>
                       <Label htmlFor="cost" className="mb-1.5 block text-xs font-medium text-muted-foreground">
                         Custo de Compra (R$)
                       </Label>
@@ -315,6 +420,18 @@ export function NewProductForm({
                         placeholder="R$ 0,00"
                         value={optional["cost"] ?? ""}
                         onChange={(e) => setField("cost", e.target.value)}
+                        className="h-9 rounded-lg text-xs"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="packaging" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                        Tipo de Embalagem
+                      </Label>
+                      <Input
+                        id="packaging"
+                        placeholder="Ex: Lata aerossol, Pacote plástico"
+                        value={optional["packaging"] ?? ""}
+                        onChange={(e) => setField("packaging", e.target.value)}
                         className="h-9 rounded-lg text-xs"
                       />
                     </div>
@@ -352,11 +469,18 @@ export function NewProductForm({
           <motion.div whileTap={{ scale: 0.98 }}>
             <Button
               size="lg"
-              className="h-13 w-full gap-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl hover:shadow-blue-500/35"
+              disabled={isScanning}
+              className="h-13 w-full gap-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl hover:shadow-blue-500/35 disabled:opacity-60"
               onClick={submit}
             >
-              <Sparkles className="size-5" />
-              <span>Gerar Anúncio Profissional</span>
+              {isScanning ? (
+                <Loader2 className="size-5 animate-spin" />
+              ) : (
+                <Sparkles className="size-5" />
+              )}
+              <span>
+                {isScanning ? "Identificando Foto..." : "Gerar Anúncio Profissional"}
+              </span>
             </Button>
           </motion.div>
         </div>
@@ -364,8 +488,9 @@ export function NewProductForm({
 
       <div className="mt-4 flex items-center justify-center gap-1.5 text-center text-xs text-muted-foreground">
         <Info className="size-3.5 text-primary" />
-        <span>Geração sem alucinações: o que não for confirmado na embalagem aparece como "Não identificado".</span>
+        <span>Geração inteligente e econômica: reutiliza a leitura visual para não duplicar créditos.</span>
       </div>
     </motion.div>
   );
 }
+

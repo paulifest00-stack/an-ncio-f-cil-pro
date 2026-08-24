@@ -14,7 +14,17 @@ const productInputSchema = z.object({
   units: z.string().optional(),
   packaging: z.string().optional(),
   other: z.string().optional(),
+  cachedIdentificacao: z.any().optional(),
 });
+
+export const quickScanPhoto = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z.object({ photoDataUrl: z.string().min(10) }).parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { scanProductPhoto } = await import("./listing.server");
+    return scanProductPhoto(data.photoDataUrl);
+  });
 
 export const generateListing = createServerFn({ method: "POST" })
   .validator((data: unknown) => productInputSchema.parse(data))
@@ -58,3 +68,4 @@ export const generateAdImage = createServerFn({ method: "POST" })
     const { renderAdImage } = await import("./listing.server");
     return renderAdImage(data.prompt, data.photoDataUrl);
   });
+

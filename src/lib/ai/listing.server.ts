@@ -165,12 +165,24 @@ function buildSearchReferences(
   return refs;
 }
 
-export async function buildListing(input: ProductInput): Promise<Listing> {
-  // ETAPA 1: Identificação visual minuciosa do produto na foto
+export async function scanProductPhoto(
+  photoDataUrl: string,
+): Promise<{
+  identificacao: Identificacao;
+  sugestoes: {
+    basicName?: string;
+    brand?: string;
+    category?: string;
+    weight?: string;
+    packaging?: string;
+    units?: string;
+    ean?: string;
+  };
+}> {
   const idMessages: ChatMessage[] = [
     {
       role: "system",
-      content: `Você é um especialista em identificação de produtos e embalagens.\n${REGRA_OURO}`,
+      content: `Você é um especialista em OCR e identificação de produtos e embalagens para e-commerce.\n${REGRA_OURO}`,
     },
     {
       role: "user",
@@ -180,11 +192,10 @@ export async function buildListing(input: ProductInput): Promise<Listing> {
           text: [
             PASSO1,
             "",
-            "Dados informados pelo usuário (se houver):",
-            userDataBlock(input) || "- (somente foto e nome básico)",
+            "Identifique todos os dados visíveis na foto: nome completo comercial do produto, marca, categoria, peso/volume, código de barras/EAN (se visível), embalagem e cor de destaque.",
           ].join("\n"),
         },
-        { type: "image_url", image_url: { url: input.photoDataUrl } },
+        { type: "image_url", image_url: { url: photoDataUrl } },
       ],
     },
   ];
@@ -193,24 +204,106 @@ export async function buildListing(input: ProductInput): Promise<Listing> {
   try {
     idResult = await chatJson<Identificacao>(idMessages);
   } catch (err) {
-    console.error("Erro no Passo 1 de identificação:", err);
+    console.error("Erro no escaneamento rápido da foto:", err);
     idResult = {
-      produto: input.basicName,
-      marca: input.brand || "",
+      produto: "",
+      marca: "",
       linha: "",
       variacao: "",
       volume: "",
       leituraEmbalagem: [],
-      certeza: "media",
-      duvidas: [],
+      certeza: "baixa",
+      duvidas: ["Não foi possível ler os detalhes da foto automaticamente."],
       corAcento: "#141414",
       proporcao: 1.0,
       layout: "C",
-      termosBusca: [
-        `${input.brand || ""} ${input.basicName}`.trim(),
-        input.basicName,
-      ],
+      termosBusca: [],
     };
+  }
+
+  // Monta sugestões limpas para pré-preenchimento
+  const basicName = [
+    idResult.produto,
+    idResult.linha,
+    idResult.volume,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Tenta extrair EAN de leituraEmbalagem se houver
+  const eanMatch = idResult.leituraEmbalagem?.find((t) => /^\d{8,14}$/.test(t.replace(/\D/g, "")));
+
+  return {
+    identificacao: idResult,
+    sugestoes: {
+      basicName: basicName || idResult.produto || undefined,
+      brand: idResult.marca || undefined,
+      weight: idResult.volume || undefined,
+      packaging: idResult.linha || undefined,
+      ean: eanMatch ? eanMatch.replace(/\D/g, "") : undefined,
+    },
+  };
+}
+
+export async function buildListing(input: ProductInput): Promise<Listing> {
+  let idResult: Identificacao;
+
+  // Se já temos a identificação pré-escaneada da foto, reutilizamos diretamente para evitar redundância e economizar tokens/créditos
+  if (input.cachedIdentificacao && (input.cachedIdentificacao.produto || input.cachedIdentificacao.marca)) {
+    idResult = {
+      ...input.cachedIdentificacao,
+      produto: input.basicName || input.cachedIdentificacao.produto,
+      marca: input.brand || input.cachedIdentificacao.marca,
+      volume: input.weight || input.cachedIdentificacao.volume,
+    };
+  } else {
+    // ETAPA 1: Identificação visual minuciosa do produto na foto
+    const idMessages: ChatMessage[] = [
+      {
+        role: "system",
+        content: `Você é um especialista em identificação de produtos e embalagens.\n${REGRA_OURO}`,
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: [
+              PASSO1,
+              "",
+              "Dados informados pelo usuário (se houver):",
+              userDataBlock(input) || "- (somente foto e nome básico)",
+            ].join("\n"),
+          },
+          { type: "image_url", image_url: { url: input.photoDataUrl } },
+        ],
+      },
+    ];
+
+    try {
+      idResult = await chatJson<Identificacao>(idMessages);
+    } catch (err) {
+      console.error("Erro no Passo 1 de identificação:", err);
+      idResult = {
+        produto: input.basicName,
+        marca: input.brand || "",
+        linha: "",
+        variacao: "",
+        volume: "",
+        leituraEmbalagem: [],
+        certeza: "media",
+        duvidas: [],
+        corAcento: "#141414",
+        proporcao: 1.0,
+        layout: "C",
+        termosBusca: [
+          `${input.brand || ""} ${input.basicName}`.trim(),
+          input.basicName,
+        ],
+      };
+    }
   }
 
   // Monta as referências de busca na internet
