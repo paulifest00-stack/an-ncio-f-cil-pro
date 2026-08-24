@@ -1,6 +1,27 @@
 import { chatJson, generateImage, type ChatMessage } from "./gateway.server";
-import { IMAGENS_REGRAS, REGRA_OURO, SCHEMA, listingContext, userDataBlock } from "./prompts.server";
-import { NAO_IDENTIFICADO, type Field, type Listing, type ListingSection, type ProductInput } from "./types";
+import {
+  IMAGENS_REGRAS,
+  PASSO1,
+  PASSO2_PONTOS,
+  REGRA_OURO,
+  REGRAS_SKU,
+  SCHEMA,
+  identificacaoBlock,
+  listingContext,
+  objectionImagePrompt,
+  photoImagePrompt,
+  userDataBlock,
+} from "./prompts.server";
+import {
+  NAO_IDENTIFICADO,
+  type Field,
+  type Identificacao,
+  type ImagePlan,
+  type Listing,
+  type ListingSection,
+  type ProductInput,
+  type Referencia,
+} from "./types";
 
 const CAMPOS_FICHA = [
   "Produto",
@@ -18,43 +39,19 @@ const CAMPOS_FICHA = [
   "EAN",
 ];
 
-function analysisMessages(input: ProductInput): ChatMessage[] {
-  return [
-    {
-      role: "system",
-      content: `Você é um especialista em cadastro de produtos e anúncios de marketplace (Mercado Livre).\n${REGRA_OURO}`,
-    },
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: [
-            "Analise a foto do produto e os dados informados pelo usuário.",
-            "Identifique visualmente o que for possível (marca, modelo, peso, volume, quantidade, embalagem, material, cor, sabor, conteúdo, fabricante, tipo de produto).",
-            "Complemente com conhecimento público confiável sobre este produto específico apenas quando tiver certeza (fabricante, marca, ficha técnica oficial).",
-            "",
-            "Dados informados pelo usuário:",
-            userDataBlock(input) || "- (somente foto e nome básico)",
-            "",
-            IMAGENS_REGRAS,
-            "",
-            SCHEMA,
-          ].join("\n"),
-        },
-        { type: "image_url", image_url: { url: input.photoDataUrl } },
-      ],
-    },
-  ];
-}
-
 function normalizeField(raw: unknown): Field {
   const f = (raw ?? {}) as Partial<Field>;
   const value = (f.value ?? "").toString().trim();
-  const empty = !value || /^(n[aã]o identificad|informa[cç][aã]o n[aã]o encontrada|desconhecid|n\/a|-)/i.test(value);
+  const empty =
+    !value ||
+    /^(n[aã]o identificad|informa[cç][aã]o n[aã]o encontrada|desconhecid|n\/a|-)/i.test(
+      value,
+    );
   return {
     value: empty ? NAO_IDENTIFICADO : value,
-    source: empty ? "nao_encontrado" : ((f.source ?? "pesquisa") as Field["source"]),
+    source: empty
+      ? "nao_encontrado"
+      : ((f.source ?? "pesquisa") as Field["source"]),
     ...(f.note ? { note: f.note } : {}),
   };
 }
@@ -62,14 +59,22 @@ function normalizeField(raw: unknown): Field {
 function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
   const ficha: Record<string, Field> = {};
   const rawFicha = (raw.fichaTecnica ?? {}) as Record<string, unknown>;
-  for (const campo of CAMPOS_FICHA) ficha[campo] = normalizeField(rawFicha[campo]);
+  for (const campo of CAMPOS_FICHA)
+    ficha[campo] = normalizeField(rawFicha[campo]);
   for (const [k, v] of Object.entries(rawFicha)) {
     if (!ficha[k]) ficha[k] = normalizeField(v);
   }
-  const kw = raw.palavrasChave ?? { principais: [], relacionadas: [], variacoes: [] };
+  const kw = raw.palavrasChave ?? {
+    principais: [],
+    relacionadas: [],
+    variacoes: [],
+  };
   return {
     resumo: raw.resumo ?? "",
-    sku: raw.sku ?? "",
+    sku: raw.sku ?? raw.skuFilho ?? raw.skuPai ?? "",
+    skuPai: raw.skuPai ?? "",
+    skuFilho: raw.skuFilho ?? "",
+    variacoesSku: raw.variacoesSku ?? [],
     nomeInterno: raw.nomeInterno ?? input.basicName,
     tituloMercadoLivre: raw.tituloMercadoLivre ?? input.basicName,
     descricao: raw.descricao ?? "",
@@ -85,9 +90,234 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
   };
 }
 
+function buildSearchReferences(
+  id: Identificacao,
+  input: ProductInput,
+): Referencia[] {
+  const terms =
+    id.termosBusca && id.termosBusca.length > 0
+      ? id.termosBusca[0]
+      : `${id.marca || input.brand || ""} ${id.produto || input.basicName || ""} ${id.volume || ""}`.trim();
+
+  const encodedTerm = encodeURIComponent(terms);
+  const mlSlug = encodeURIComponent(terms.replace(/\s+/g, "-"));
+
+  const refs: Referencia[] = [
+    {
+      titulo: `Mercado Livre — ${terms}`,
+      url: `https://lista.mercadolivre.com.br/${mlSlug}`,
+      tipo: "marketplace",
+      observacao: "Ver anúncios concorrentes, preços, fotos e descrições no ML",
+    },
+    {
+      titulo: `Amazon Brasil — ${terms}`,
+      url: `https://www.amazon.com.br/s?k=${encodedTerm}`,
+      tipo: "marketplace",
+      observacao: "Ver perguntas frequentes, avaliações e detalhes na Amazon",
+    },
+    {
+      titulo: `Shopee — ${terms}`,
+      url: `https://shopee.com.br/search?keyword=${encodedTerm}`,
+      tipo: "marketplace",
+      observacao: "Ver variações, combos e fotos reais na Shopee",
+    },
+    {
+      titulo: `Google Shopping & Busca — ${terms}`,
+      url: `https://www.google.com/search?q=${encodedTerm}&tbm=shop`,
+      tipo: "busca",
+      observacao: "Comparar ficha técnica e distribuidores no Google",
+    },
+  ];
+
+  if (id.dominioOficial) {
+    const cleanDomain = id.dominioOficial
+      .replace(/^https?:\/\//, "")
+      .replace(/\/$/, "");
+    refs.unshift({
+      titulo: `Site Oficial do Fabricante (${cleanDomain})`,
+      url: `https://${cleanDomain}`,
+      tipo: "oficial",
+      verificado: true,
+      observacao: "Fonte oficial da marca para extrair especificações exatas",
+    });
+  }
+
+  return refs;
+}
+
 export async function buildListing(input: ProductInput): Promise<Listing> {
-  const raw = await chatJson<Partial<Listing>>(analysisMessages(input));
-  return normalize(raw, input);
+  // ETAPA 1: Identificação visual minuciosa do produto na foto
+  const idMessages: ChatMessage[] = [
+    {
+      role: "system",
+      content: `Você é um especialista em identificação de produtos e embalagens.\n${REGRA_OURO}`,
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: [
+            PASSO1,
+            "",
+            "Dados informados pelo usuário (se houver):",
+            userDataBlock(input) || "- (somente foto e nome básico)",
+          ].join("\n"),
+        },
+        { type: "image_url", image_url: { url: input.photoDataUrl } },
+      ],
+    },
+  ];
+
+  let idResult: Identificacao;
+  try {
+    idResult = await chatJson<Identificacao>(idMessages);
+  } catch (err) {
+    console.error("Erro no Passo 1 de identificação:", err);
+    idResult = {
+      produto: input.basicName,
+      marca: input.brand || "",
+      linha: "",
+      variacao: "",
+      volume: "",
+      leituraEmbalagem: [],
+      certeza: "media",
+      duvidas: [],
+      corAcento: "#141414",
+      proporcao: 1.0,
+      layout: "C",
+      termosBusca: [
+        `${input.brand || ""} ${input.basicName}`.trim(),
+        input.basicName,
+      ],
+    };
+  }
+
+  // Monta as referências de busca na internet
+  const referencias = buildSearchReferences(idResult, input);
+
+  // ETAPA 2 & 3: Levantamento de pontos de quebra de objeções e plano de layout
+  const planMessages: ChatMessage[] = [
+    {
+      role: "system",
+      content: `Você é um especialista em design de anúncios de alta conversão para marketplace.\n${REGRA_OURO}`,
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: [
+            identificacaoBlock(idResult),
+            "",
+            "Dados do usuário:",
+            userDataBlock(input) || "- (somente foto e nome básico)",
+            "",
+            PASSO2_PONTOS,
+          ].join("\n"),
+        },
+        { type: "image_url", image_url: { url: input.photoDataUrl } },
+      ],
+    },
+  ];
+
+  let planResult: ImagePlan;
+  try {
+    planResult = await chatJson<ImagePlan>(planMessages);
+    // Assegura que o layout e cor de acento coincidam ou respeitem a proporção
+    if (!planResult.corAcento || planResult.corAcento === "#000000") {
+      planResult.corAcento = idResult.corAcento || "#141414";
+    }
+  } catch (err) {
+    console.error("Erro no Passo 2/3 de planejamento de imagem:", err);
+    planResult = {
+      proporcao: idResult.proporcao || 1.0,
+      layout: idResult.layout || "C",
+      corAcento: idResult.corAcento || "#141414",
+      titulo: {
+        linha1: idResult.produto || input.basicName,
+        linha2: idResult.linha || idResult.marca || input.brand || "Original",
+        linha3: idResult.volume || "Pronto Entrega",
+      },
+      pontos: [
+        { texto: "PRODUTO 100% ORIGINAL", icone: "shield", fonte: "rótulo" },
+        { texto: "ALTA QUALIDADE E DURABILIDADE", icone: "star", fonte: "rótulo" },
+        { texto: "ENVIO RÁPIDO E SEGURO", icone: "box", fonte: "usuário" },
+        { texto: "PRONTO PARA USO", icone: "check", fonte: "rótulo" },
+      ],
+      naoConfirmado: [],
+    };
+  }
+
+  // ETAPA 4: Geração do anúncio completo (Mercado Livre + Bling + SKU Pai/Filho)
+  const listingMessages: ChatMessage[] = [
+    {
+      role: "system",
+      content: `Você é o maior especialista em criação de anúncios para Mercado Livre e cadastro no ERP Bling.\n${REGRA_OURO}`,
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: [
+            "Gere o anúncio completo e os SKUs padronizados seguindo rigorosamente o esquema abaixo.",
+            "",
+            identificacaoBlock(idResult),
+            "",
+            "Plano da Imagem de Objeções gerado:",
+            JSON.stringify(planResult, null, 2),
+            "",
+            "Dados informados pelo usuário:",
+            userDataBlock(input) || "- (somente foto e nome básico)",
+            "",
+            IMAGENS_REGRAS,
+            "",
+            SCHEMA,
+          ].join("\n"),
+        },
+        { type: "image_url", image_url: { url: input.photoDataUrl } },
+      ],
+    },
+  ];
+
+  const rawListing = await chatJson<Partial<Listing>>(listingMessages);
+  const listing = normalize(rawListing, input);
+
+  // Vincula os dados estruturados da identificação, referências e plano de imagem
+  listing.identificacao = idResult;
+  listing.referencias = referencias;
+
+  // Atualiza ou insere o prompt definitivo da imagem de quebra de objeções
+  const objectionPrompt = objectionImagePrompt(planResult);
+  let objImg = listing.imagens.find((i) => i.tipo === "objecoes");
+  if (!objImg) {
+    objImg = {
+      tipo: "objecoes",
+      titulo: "Arte de Quebra de Objeções (Infográfico)",
+      prompt: objectionPrompt,
+      observacoes: `Layout ${planResult.layout} baseado na proporção ${planResult.proporcao.toFixed(2)}`,
+      plano: planResult,
+    };
+    listing.imagens.push(objImg);
+  } else {
+    objImg.prompt = objectionPrompt;
+    objImg.observacoes = `Layout ${planResult.layout} (Proporção ${planResult.proporcao.toFixed(2)})`;
+    objImg.plano = planResult;
+  }
+
+  // Se houver dúvidas não confirmadas em idResult ou planResult, anexa aos alertas
+  const extraAlerts = [
+    ...idResult.duvidas,
+    ...(planResult.naoConfirmado || []),
+  ].filter(Boolean);
+  for (const alert of extraAlerts) {
+    if (!listing.alertas.includes(alert)) {
+      listing.alertas.push(alert);
+    }
+  }
+
+  return listing;
 }
 
 const SECTION_LABEL: Record<ListingSection, string> = {
@@ -109,7 +339,7 @@ export async function regenerate(
   const result = await chatJson<Partial<Listing>>([
     {
       role: "system",
-      content: `Você é um especialista em anúncios de marketplace.\n${REGRA_OURO}`,
+      content: `Você é um especialista em anúncios de marketplace (Mercado Livre e Bling).\n${REGRA_OURO}\n${REGRAS_SKU}`,
     },
     {
       role: "user",
@@ -138,21 +368,30 @@ export async function regenerate(
 
   if (section === "fichaTecnica") {
     const ficha: Record<string, Field> = {};
-    for (const [k, v] of Object.entries((result.fichaTecnica ?? {}) as Record<string, unknown>)) {
+    for (const [k, v] of Object.entries(
+      (result.fichaTecnica ?? {}) as Record<string, unknown>,
+    )) {
       ficha[k] = normalizeField(v);
     }
     return { fichaTecnica: ficha };
   }
+  if (section === "sku") {
+    return {
+      sku: result.sku ?? listing.sku,
+      skuPai: result.skuPai ?? listing.skuPai,
+      skuFilho: result.skuFilho ?? listing.skuFilho,
+      variacoesSku: result.variacoesSku ?? listing.variacoesSku,
+    };
+  }
   return { [key]: result[key as keyof Listing] } as Partial<Listing>;
 }
 
-export async function renderAdImage(prompt: string, photoDataUrl: string): Promise<string> {
-  const guarded = [
-    prompt,
-    "",
-    "Strict rules: keep the exact product from the reference photo — same packaging, same logo, same printed text, same colors, same shape, same quantity.",
-    "Do not add accessories, do not invent labels or text, do not restyle the packaging.",
-    "Result must look like a real professional product photograph: clean, minimal, sharp, natural studio lighting, no AI-looking artifacts, no heavy graphics.",
-  ].join("\n");
-  return generateImage(guarded, photoDataUrl);
+export async function renderAdImage(
+  prompt: string,
+  photoDataUrl: string,
+): Promise<string> {
+  // Se o prompt já for o do infográfico (já estruturado com regras 1:1 e layout), envia diretamente
+  const isInfographic = prompt.includes("infographic image") || prompt.includes("RULES FOR ALL LAYOUTS");
+  const finalPrompt = isInfographic ? prompt : photoImagePrompt(prompt);
+  return generateImage(finalPrompt, photoDataUrl);
 }

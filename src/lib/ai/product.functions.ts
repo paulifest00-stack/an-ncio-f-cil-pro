@@ -17,14 +17,14 @@ const productInputSchema = z.object({
 });
 
 export const generateListing = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => productInputSchema.parse(data))
+  .validator((data: unknown) => productInputSchema.parse(data))
   .handler(async ({ data }) => {
     const { buildListing } = await import("./listing.server");
     return buildListing(data as ProductInput);
   });
 
 export const regenerateSection = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z
       .object({
         section: z.enum([
@@ -51,7 +51,7 @@ export const regenerateSection = createServerFn({ method: "POST" })
   });
 
 export const generateAdImage = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
+  .validator((data: unknown) =>
     z.object({ prompt: z.string().min(5), photoDataUrl: z.string().min(10) }).parse(data),
   )
   .handler(async ({ data }) => {

@@ -33,19 +33,74 @@ export function userDataBlock(input: ProductInput): string {
     .join("\n");
 }
 
+export const REGRAS_SKU = `
+REGRAS E PADRONIZAÇÃO DE GERAÇÃO DE SKU (PAI E FILHO):
+1. ESTRUTURA GERAL DO SKU:
+O SKU é formado pela Aglutinação do Bloco Base (SKU Pai) seguido de um Sufixo de Variação (SKU Filho) delimitado por hífen (-).
+[MARCA][CATEGORIA/PRODUTO][ESPECIFICACAO_FIXA][QTD_BASE] - [VARIACAO]
+|<--------------------- SKU PAI --------------------->| |<-- SKU FILHO -->|
+
+2. COMPONENTES DO SKU PAI (BASE AGLUTINADA):
+O SKU Pai identifica a família do produto sem a variação final.
+- Ordem 1 (Marca/Fornecedor): 2 a 3 letras (Ex: POP = Popper, BP = Bompack, GM = Gour Max, PP = Pic Pic)
+- Ordem 2 (Tipo/Categoria): 3 a 6 letras (Ex: TPC = Tinta Pinta Cabelo, LUVNIT = Luva Nitrílica, POTRET = Pote Retangular)
+- Ordem 3 (Atributo Fixo - Opcional): 2 a 4 caracteres (Ex: PR = Preta, FLUO = Fluorescente)
+- Ordem 4 (Embalagem/Medida Base): 2 a 4 caracteres (Ex: 150 = 150ml, 100 = 100un, 24 = 24un, 1UN = 1 unidade)
+
+Exemplos de SKU Pai:
+- POPTPC150 (Popper + Tinta Pinta Cabelo + 150ml)
+- BPLUVNITPR100 (Bompack + Luva Nitrílica + Preta + 100un)
+- GMPOTRET24 (Gour Max + Pote Retangular + 24un)
+
+3. COMPONENTES DO SKU FILHO (VARIAÇÕES):
+O SKU Filho herda o SKU Pai e recebe '-' + código da variação.
+Tipos Comuns:
+- Cores: -AZ (Azul), -VM (Vermelho), -AM (Amarelo), -PR (Preto), -BR (Branco), -RS (Rosa)
+- Tamanhos Vestuário/Luvas: -P, -M, -G, -GG
+- Capacidades/Volumes: -250 (250ml), -500 (500ml), -750 (750ml), -1000 (1000ml)
+- Polegadas/Balões: -5POL, -9POL, -12POL, -18POL
+
+4. EXEMPLOS PRÁTICOS:
+- Spray Pinta Cabelo Popper 150ml:
+  * SKU Pai: POPTPC150
+  * Variação Azul: POPTPC150-AZ
+  * Variação Rosa: POPTPC150-RS
+- Luva Nitrílica Bompack Preta 100un:
+  * SKU Pai: BPLUVNITPR100
+  * Tam P: BPLUVNITPR100-P
+  * Tam M: BPLUVNITPR100-M
+  * Tam G: BPLUVNITPR100-G
+- Pote Retangular Gour Max c/ 24un:
+  * SKU Pai: GMPOTRET24
+  * 250 ml: GMPOTRET24-250
+  * 500 ml: GMPOTRET24-500
+  * 1000 ml: GMPOTRET24-1000
+
+5. REGRAS DE FORMATAÇÃO:
+- Somente letras maiúsculas (sem acentos ou caracteres especiais).
+- Permitidos apenas A-Z, 0-9 e o separador hífen (-).
+- Sem espaços em branco.
+- Comprimento: Pai (8 a 16 caracteres), Filho (10 a 20 caracteres).
+`.trim();
+
 /* ───────────────────────── PASSO 1 — IDENTIFICAR ───────────────────────── */
 
 export const PASSO1 = `
+Você recebeu a foto de um produto. Execute em ordem:
+
 PASSO 1 — IDENTIFICAR
-Descubra exatamente qual é o produto: marca, linha, variação e volume/tamanho/quantidade, lendo literalmente o que está escrito na embalagem da foto.
-Não adivinhe. Se não tiver certeza de algum item, deixe-o vazio e registre em "duvidas".
+Descubra exatamente qual é o produto: marca, linha, variação e volume/tamanho/quantidade, lendo o que está escrito na embalagem da foto.
+Se não tiver certeza, registre em "duvidas". Não adivinhe.
 
 Também nesta etapa:
 - Transcreva em "leituraEmbalagem" cada texto legível na embalagem (marca, linha, peso, quantidade, sabor, avisos).
-- Extraia em "corAcento" a cor dominante do rótulo ou da tampa, em hexadecimal.
+- Extraia em "corAcento" a cor dominante do rótulo ou da tampa, em hexadecimal (ex: #E4002B).
 - Calcule "proporcao" = largura ÷ altura do produto já recortado, sem fundo (número decimal).
-- Escolha "layout": proporcao < 0.85 → "A"; entre 0.85 e 1.25 → "C"; > 1.25 → "B".
-- Liste em "termosBusca" de 3 a 5 termos exatos para procurar este produto na internet (o mais específico primeiro, incluindo marca + linha + volume).
+- Escolha "layout" baseado na proporção:
+  * Menor que 0.85 (produto alto e estreito: spray, garrafa, tubo, vela, tinta) → "A"
+  * Entre 0.85 e 1.25 (produto quadrado: pote, lata, caixa cúbica) → "C"
+  * Maior que 1.25 (produto deitado: caixa retangular, kit, bandeja, cartela, blister) → "B"
+- Liste em "termosBusca" de 3 a 5 termos exatos para procurar este produto na internet (o mais específico primeiro, incluindo marca + linha + volume/quantidade).
 - Se souber com certeza o domínio oficial do fabricante, informe em "dominioOficial" (apenas o domínio, ex: "nestle.com.br"). Se não souber, deixe vazio.
 
 Responda SOMENTE com JSON:
@@ -68,22 +123,32 @@ export function identificacaoBlock(id?: Identificacao): string {
     `- Volume/tamanho: ${id.volume}`,
     `- Texto lido na embalagem: ${id.leituraEmbalagem.join(" | ")}`,
     `- Nível de certeza: ${id.certeza}`,
+    `- Proporção calculada: ${id.proporcao}`,
+    `- Layout escolhido: ${id.layout}`,
+    `- Cor de acento: ${id.corAcento}`,
     id.duvidas.length ? `- Dúvidas em aberto: ${id.duvidas.join("; ")}` : "",
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-/* ───────────────────────── PASSO 2 — ANÚNCIO ───────────────────────── */
+/* ───────────────────────── PASSO 2 — ANÚNCIO (MERCADO LIVRE / BLING) ───────────────────────── */
 
 export const SCHEMA = `
+${REGRAS_SKU}
+
 Responda SOMENTE com JSON válido neste formato:
 {
   "resumo": "2 a 4 frases objetivas sobre o que foi confirmado e o que ficou pendente",
-  "sku": "SKU curto em MAIÚSCULAS, blocos separados por hífen, apenas com dados confirmados (ex: PAC-ROLHA-1KG-100UN)",
-  "nomeInterno": "nome curto para cadastro interno no Bling, sem SEO (ex: Paçoca Rolha 1kg 100un)",
-  "tituloMercadoLivre": "título otimizado, natural, até 60 caracteres, só com dados confirmados",
-  "descricao": "descrição comercial profissional em texto puro, com seções (apresentação, características, especificações, conteúdo da embalagem, utilização, informações importantes, perguntas frequentes) apenas quando houver dado confirmado. Sem emojis excessivos, sem promessas, sem frases genéricas de IA",
+  "sku": "SKU principal do produto respeitando rigorosamente as REGRAS E PADRONIZAÇÃO DE GERAÇÃO DE SKU",
+  "skuPai": "SKU Pai aglutinado da família do produto (ex: POPTPC150, BPLUVNITPR100, GMPOTRET24)",
+  "skuFilho": "SKU Filho completo com variação (ex: POPTPC150-AZ) ou igual ao SKU Pai se não houver variação",
+  "variacoesSku": [
+    { "variacao": "Nome da variação (ex: Azul, 250ml, Tam M)", "sku": "SKU filho correspondente (ex: POPTPC150-AZ)" }
+  ],
+  "nomeInterno": "nome curto e limpo para cadastro interno no Bling, sem termos de busca SEO (ex: Spray Pinta Cabelo Popper 150ml Azul)",
+  "tituloMercadoLivre": "título de alta conversão para o Mercado Livre, natural e persuasivo, até 60 caracteres, apenas com dados confirmados",
+  "descricao": "descrição comercial profissional de alta conversão estruturada em seções claras (APRESENTAÇÃO DO PRODUTO, PRINCIPAIS CARACTERÍSTICAS E BENEFÍCIOS, ESPECIFICAÇÕES TÉCNICAS, CONTEÚDO DA EMBALAGEM, MODO DE USO / CUIDADOS, PERGUNTAS FREQUENTES) apenas com dados reais confirmados. Sem emojis exagerados, sem promessas falsas, texto fluido e profissional em português do Brasil.",
   "palavrasChave": { "principais": [], "relacionadas": [], "variacoes": [] },
   "fichaTecnica": {
     "Produto": { "value": "", "source": "usuario|imagem|pesquisa|nao_encontrado", "note": "opcional" },
@@ -94,10 +159,10 @@ Responda SOMENTE com JSON válido neste formato:
   "caracteristicas": ["características REAIS visíveis ou confirmadas"],
   "alertas": ["conflitos entre fontes, informações que precisam ser confirmadas pelo usuário"],
   "imagens": [
-    { "tipo": "principal", "titulo": "", "prompt": "prompt fotográfico em inglês", "observacoes": "" },
-    { "tipo": "objecoes", "titulo": "", "prompt": "", "observacoes": "" },
-    { "tipo": "detalhes", "titulo": "", "prompt": "", "observacoes": "" },
-    { "tipo": "contexto", "titulo": "", "prompt": "", "observacoes": "" }
+    { "tipo": "principal", "titulo": "Foto Principal (Fundo Branco)", "prompt": "prompt fotográfico em inglês", "observacoes": "" },
+    { "tipo": "objecoes", "titulo": "Arte de Quebra de Objeções (Infográfico)", "prompt": "", "observacoes": "" },
+    { "tipo": "detalhes", "titulo": "Foto de Detalhes / Textura / Rótulo", "prompt": "", "observacoes": "" },
+    { "tipo": "contexto", "titulo": "Foto em Uso / Ambiente", "prompt": "", "observacoes": "" }
   ]
 }
 Campos da ficha sem informação: {"value": "Não identificado", "source": "nao_encontrado"}.
@@ -106,10 +171,10 @@ Campos da ficha sem informação: {"value": "Não identificado", "source": "nao_
 export const IMAGENS_REGRAS = `
 Prompts de imagem (em inglês, fotografia comercial real, minimalista, limpa, sem cara de IA).
 TODAS as imagens são obrigatoriamente QUADRADAS 1:1.
-- principal: produto em fundo branco puro #FFFFFF, luz de estúdio, sombra suave, produto inteiro, centralizado, alta nitidez, padrão catálogo.
-- objecoes: arte de quebra de objeções (o layout é definido em etapa própria) — o prompt aqui deve ser apenas uma linha descrevendo a intenção.
-- detalhes: close real da embalagem/produto, fundo branco, fotografia profissional.
-- contexto: única exceção ao fundo branco — produto em uso, cena realista e adequada à finalidade, aparência de fotografia real.
+- principal: produto em fundo branco puro #FFFFFF, luz de estúdio, sombra suave, produto inteiro, centralizado, alta nitidez, padrão catálogo profissional de marketplace.
+- objecoes: arte de quebra de objeções (o layout é definido no PASSO 3) — o prompt aqui deve ser apenas uma linha descrevendo a intenção.
+- detalhes: close real da embalagem/produto, fundo branco, fotografia profissional macro.
+- contexto: única exceção ao fundo branco — produto em uso, cena realista e adequada à finalidade, aparência de fotografia real de publicidade.
 Todos os prompts devem exigir fidelidade total: não alterar embalagem, logotipo, textos, cores, formato, quantidade nem acessórios do produto da foto.
 `.trim();
 
@@ -117,6 +182,8 @@ export function listingContext(listing: Listing): string {
   return JSON.stringify(
     {
       sku: listing.sku,
+      skuPai: listing.skuPai,
+      skuFilho: listing.skuFilho,
       nomeInterno: listing.nomeInterno,
       titulo: listing.tituloMercadoLivre,
       fichaTecnica: listing.fichaTecnica,
@@ -127,28 +194,30 @@ export function listingContext(listing: Listing): string {
   );
 }
 
-/* ───────────────── PASSO 3 — PLANO DA IMAGEM DE OBJEÇÕES ───────────────── */
+/* ───────────────── PASSO 2 & 3 — PLANO DA IMAGEM DE OBJEÇÕES ───────────────── */
 
 export const PASSO2_PONTOS = `
-PASSO 2 — LEVANTAR PONTOS DE QUEBRA DE OBJEÇÃO
-Considere o que se sabe deste produto exato (rótulo da foto, dados do usuário e conhecimento público confiável do fabricante/marketplaces).
+PASSO 2 — PESQUISAR
+Pesquise esse produto exato na web (site do fabricante, Mercado Livre, Amazon, Shopee, perguntas de compradores, reviews).
 Levante dúvidas e objeções reais de quem compra, mais as especificações confirmadas: conteúdo, quantidade de peças, material, medidas, modo de uso, compatibilidade, cuidados, restrições.
-Selecione de 4 a 7 pontos, priorizando o que quebra objeção e o que NÃO se descobre olhando a foto. Ordene do mais decisivo para o menos.
-Só use informação confirmada pelo rótulo da foto ou por fonte real. Se não confirmar, descarte e use outro ponto.
-Cada ponto: no máximo 5 palavras, CAIXA ALTA, com a fonte declarada ("rótulo", "usuário" ou "fabricante").
-Cada ponto tem também um "icone": nome curto em inglês do pictograma de linha simples que representa aquele benefício (ex: "shield", "leaf", "ruler", "box", "clock").
+Selecione de 4 a 7 pontos, priorizando o que quebra objeção e o que NÃO se descobre olhando a foto. Ordene do mais decisivo pro menos.
+Só use informação confirmada pelo rótulo da foto ou por fonte real. Se não confirmar, descarta e usa outro ponto.
 
-PASSO 3 — MEDIR O PRODUTO E ESCOLHER O LAYOUT
-Confirme a proporção largura ÷ altura do produto recortado e o layout correspondente:
-- < 0.85 (alto e estreito: spray, garrafa, tubo) → LAYOUT A
-- 0.85 a 1.25 (quadrado: pote, lata, caixa cúbica) → LAYOUT C
-- > 1.25 (deitado: caixa retangular, kit, cartela, blister) → LAYOUT B
-O produto NUNCA pode ser distorcido, esticado, cortado ou girado para caber. O layout se adapta ao produto.
+Cada ponto: no máximo 5 palavras, CAIXA ALTA, com a fonte declarada ("rótulo", "usuário" ou "fabricante").
+Cada ponto tem também um "icone": nome curto em inglês do pictograma de linha simples que representa aquele benefício (ex: "shield", "leaf", "ruler", "box", "clock", "check", "star", "droplet", "zap").
+
+PASSO 3 — MEDIR O PRODUTO E ESCOLHER O LAYOUT (obrigatório)
+Calcule a proporção largura ÷ altura do produto já recortado, sem fundo:
+- Menor que 0.85 (produto alto e estreito: spray, garrafa, tubo, vela, tinta) → LAYOUT A
+- Entre 0.85 e 1.25 (produto quadrado: pote, lata, caixa cúbica) → LAYOUT C
+- Maior que 1.25 (produto deitado: caixa retangular, kit, bandeja, cartela, blister) → LAYOUT B
+
+O produto NUNCA pode ficar distorcido, esticado, cortado ou girado para caber. O layout se adapta ao produto, nunca o contrário.
 
 TÍTULO (3 linhas)
-- linha1: tipo do produto (corpo menor)
-- linha2: nome/linha do produto (corpo maior, negrito, na cor de acento)
-- linha3: volume, tamanho ou quantidade
+- linha1: tipo do produto em corpo menor, preto #141414.
+- linha2: nome/linha do produto em corpo bem maior, negrito pesado, na COR DE ACENTO.
+- linha3: volume, tamanho ou quantidade, mesmo corpo grande da linha 2.
 
 COR DE ACENTO: uma única cor extraída da própria embalagem (dominante do rótulo ou da tampa), em hexadecimal.
 
@@ -158,7 +227,7 @@ Responda SOMENTE com JSON:
   "layout": "A|B|C",
   "corAcento": "#RRGGBB",
   "titulo": { "linha1": "", "linha2": "", "linha3": "" },
-  "pontos": [ { "texto": "ATÉ 5 PALAVRAS", "icone": "shield", "fonte": "rótulo|usuário|fabricante" } ],
+  "pontos": [ { "texto": "ATÉ 5 PALAVRAS EM CAIXA ALTA", "icone": "shield", "fonte": "rótulo|usuário|fabricante" } ],
   "naoConfirmado": ["o que não foi possível confirmar"]
 }
 `.trim();

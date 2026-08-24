@@ -79,8 +79,16 @@ export interface ImageBrief {
   plano?: ImagePlan;
 }
 
+export interface SkuVariacao {
+  variacao: string;
+  sku: string;
+}
+
 export interface Listing {
   sku: string;
+  skuPai?: string;
+  skuFilho?: string;
+  variacoesSku?: SkuVariacao[];
   nomeInterno: string;
   tituloMercadoLivre: string;
   descricao: string;
