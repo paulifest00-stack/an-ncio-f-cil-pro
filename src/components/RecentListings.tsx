@@ -188,12 +188,13 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
         <Button
           variant="outline"
           size="sm"
-          className="gap-1.5 text-xs font-medium"
+          className="gap-2 rounded-xl text-xs font-medium border-border/80 bg-card hover:border-primary/40 hover:bg-accent/40"
+          title="Ver todos os seus anúncios salvos"
         >
-          <Database className="size-3.5 text-primary" />
-          <span>Banco Supabase</span>
+          <History className="size-3.5 text-primary" />
+          <span>Meus Anúncios</span>
           {items.length > 0 && (
-            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
+            <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-mono">
               {items.length}
             </Badge>
           )}
@@ -204,9 +205,9 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
         <SheetHeader className="border-b border-border pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Cloud className="size-5 text-primary" />
+              <Package className="size-5 text-primary" />
               <SheetTitle className="text-base font-semibold">
-                Anúncios Salvos na Nuvem
+                Meus Anúncios Salvos
               </SheetTitle>
             </div>
             {items.length > 0 && (
@@ -221,7 +222,7 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
             )}
           </div>
           <SheetDescription className="text-xs">
-            Seus anúncios gerados ficam salvos de forma permanente no banco de dados Supabase.
+            Clique em qualquer anúncio abaixo para abrir a tela completa com títulos, descrições, ficha técnica e imagens.
           </SheetDescription>
         </SheetHeader>
 
