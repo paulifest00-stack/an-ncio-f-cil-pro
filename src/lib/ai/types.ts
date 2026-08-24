@@ -15,6 +15,7 @@ export interface ProductInput {
   basicName: string;
   brand?: string;
   ean?: string;
+  ncm?: string;
   category?: string;
   cost?: string;
   weight?: string;
@@ -83,6 +84,7 @@ export interface ImageBrief {
 export interface SkuVariacao {
   variacao: string;
   sku: string;
+  ean?: string;
 }
 
 export interface Listing {
@@ -92,6 +94,8 @@ export interface Listing {
   variacoesSku?: SkuVariacao[];
   nomeInterno: string;
   tituloMercadoLivre: string;
+  ncm?: string;
+  ean?: string;
   descricao: string;
   palavrasChave: {
     principais: string[];
@@ -115,3 +119,4 @@ export type ListingSection =
   | "palavrasChave"
   | "fichaTecnica"
   | "imagens";
+

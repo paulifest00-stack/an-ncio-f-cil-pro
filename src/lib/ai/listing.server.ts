@@ -28,6 +28,8 @@ const CAMPOS_FICHA = [
   "Marca",
   "Modelo",
   "Categoria",
+  "NCM",
+  "EAN",
   "Peso",
   "Dimensões",
   "Quantidade",
@@ -36,7 +38,6 @@ const CAMPOS_FICHA = [
   "Sabor",
   "Conteúdo",
   "Fabricante",
-  "EAN",
 ];
 
 function normalizeField(raw: unknown): Field {
@@ -69,6 +70,19 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
     relacionadas: [],
     variacoes: [],
   };
+
+  const ncmValue =
+    raw.ncm ||
+    (ficha["NCM"]?.value !== NAO_IDENTIFICADO ? ficha["NCM"]?.value : "") ||
+    input.ncm ||
+    "";
+
+  const eanValue =
+    raw.ean ||
+    (ficha["EAN"]?.value !== NAO_IDENTIFICADO ? ficha["EAN"]?.value : "") ||
+    input.ean ||
+    "";
+
   return {
     resumo: raw.resumo ?? "",
     sku: raw.sku ?? raw.skuFilho ?? raw.skuPai ?? "",
@@ -77,6 +91,8 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
     variacoesSku: raw.variacoesSku ?? [],
     nomeInterno: raw.nomeInterno ?? input.basicName,
     tituloMercadoLivre: raw.tituloMercadoLivre ?? input.basicName,
+    ncm: ncmValue,
+    ean: eanValue,
     descricao: raw.descricao ?? "",
     palavrasChave: {
       principais: kw.principais ?? [],

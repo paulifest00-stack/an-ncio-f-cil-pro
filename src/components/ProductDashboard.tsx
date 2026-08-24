@@ -3,21 +3,32 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertTriangle,
   ArrowLeft,
+  Barcode,
   Check,
+  ChevronRight,
   Copy,
   Download,
   ExternalLink,
+  Eye,
+  FileSpreadsheet,
   FileText,
   Globe,
   ImageIcon,
+  Info,
+  Layers,
   Loader2,
   Package,
   Palette,
   RefreshCw,
+  Search,
+  Share2,
+  ShieldCheck,
   ShoppingBag,
   ShoppingCart,
   Sparkles,
   Tag,
+  Wand2,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +39,7 @@ import type {
   Listing,
   ListingSection,
   ProductInput,
+  SkuVariacao,
 } from "@/lib/ai/types";
 import { NAO_IDENTIFICADO } from "@/lib/ai/types";
 import {
@@ -35,6 +47,7 @@ import {
   regenerateSection,
 } from "@/lib/ai/product.functions";
 import { registerUsage } from "@/lib/usage";
+import { formatEan13, generateValidEan13, validateEan13 } from "@/lib/ean";
 
 const SOURCE_LABEL: Record<Field["source"], string> = {
   usuario: "Informado por você",
@@ -94,7 +107,7 @@ function CopyButton({
 const TABS = [
   { id: "resumo", label: "Visão Geral", icon: Package },
   { id: "ml", label: "Mercado Livre", icon: ShoppingCart },
-  { id: "sku", label: "SKU Pai & Filho", icon: Tag },
+  { id: "sku", label: "SKU & Fiscal (NCM/EAN)", icon: Tag },
   { id: "descricao", label: "Descrição & Ficha", icon: FileText },
   { id: "imagens", label: "Imagens 1:1 & Layout", icon: ImageIcon },
   { id: "referencias", label: "Referências Web", icon: Globe },
@@ -157,14 +170,43 @@ export function ProductDashboard({
     }
   };
 
+  const handleGenerateMainEan = () => {
+    const newEan = generateValidEan13("789");
+    const updatedFicha = { ...listing.fichaTecnica };
+    updatedFicha["EAN"] = { value: newEan, source: "usuario" };
+    patch({ ean: newEan, fichaTecnica: updatedFicha });
+  };
+
+  const handleGenerateVariationEan = (index: number) => {
+    const newEan = generateValidEan13("789");
+    const updatedVars = [...(listing.variacoesSku || [])];
+    if (updatedVars[index]) {
+      updatedVars[index] = { ...updatedVars[index], ean: newEan };
+      patch({ variacoesSku: updatedVars });
+    }
+  };
+
+  const handleGenerateAllVariationEans = () => {
+    const updatedVars = (listing.variacoesSku || []).map((v) => ({
+      ...v,
+      ean: v.ean || generateValidEan13("789"),
+    }));
+    patch({ variacoesSku: updatedVars });
+  };
+
   const id = listing.identificacao;
   const objImg = listing.imagens.find((i) => i.tipo === "objecoes");
   const plano = objImg?.plano;
+
+  const currentNcm = listing.ncm || listing.fichaTecnica?.["NCM"]?.value || "";
+  const currentEan = listing.ean || listing.fichaTecnica?.["EAN"]?.value || "";
 
   const anuncioCompleto = [
     `SKU: ${listing.sku}`,
     listing.skuPai ? `SKU Pai: ${listing.skuPai}` : "",
     listing.skuFilho ? `SKU Filho: ${listing.skuFilho}` : "",
+    currentNcm ? `NCM: ${currentNcm}` : "",
+    currentEan ? `EAN-13: ${currentEan}` : "",
     `Nome interno (Bling): ${listing.nomeInterno}`,
     `Título Mercado Livre: ${listing.tituloMercadoLivre}`,
     "",
@@ -228,6 +270,11 @@ export function ProductDashboard({
                   <Tag className="size-3 text-primary" />
                   {listing.sku || "SEM SKU"}
                 </span>
+                {currentNcm ? (
+                  <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-mono text-[11px] font-semibold text-foreground">
+                    NCM: {currentNcm}
+                  </span>
+                ) : null}
                 {id?.marca ? (
                   <span>
                     Marca: <strong className="text-foreground">{id.marca}</strong>
@@ -357,6 +404,50 @@ export function ProductDashboard({
               <p className="mt-2 text-base font-bold text-foreground sm:text-lg">
                 {listing.tituloMercadoLivre}
               </p>
+            </div>
+
+            {/* Card Rápido de NCM & EAN */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    NCM (Classificação Fiscal)
+                  </span>
+                  {currentNcm && <CopyButton text={currentNcm} label="Copiar" />}
+                </div>
+                <p className="mt-1.5 font-mono text-base font-bold text-foreground">
+                  {currentNcm || "Não identificado"}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Nomenclatura Comum do Mercosul para notas fiscais
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Código de Barras EAN-13
+                  </span>
+                  {currentEan ? (
+                    <CopyButton text={currentEan} label="Copiar" />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleGenerateMainEan}
+                      className="flex items-center gap-1 text-[11px] font-bold text-primary hover:underline"
+                    >
+                      <Zap className="size-3" />
+                      Gerar EAN
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1.5 font-mono text-base font-bold text-primary">
+                  {currentEan || "Sem código gerado"}
+                </p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Código de barras oficial para marketplace e ERP
+                </p>
+              </div>
             </div>
 
             {/* Diagnóstico da IA */}
@@ -506,7 +597,7 @@ export function ProductDashboard({
           </motion.div>
         )}
 
-        {/* ABA 3: SKU PAI & FILHO */}
+        {/* ABA 3: SKU, FISCAL (NCM) & GERADOR EAN-13 */}
         {activeTab === "sku" && (
           <motion.div
             key="sku"
@@ -556,27 +647,164 @@ export function ProductDashboard({
               </div>
             </div>
 
-            {/* Variações Mapeadas */}
+            {/* CARD FISCAL: NCM & GERADOR DE EAN-13 */}
+            <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <Barcode className="size-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                      Dados Fiscais & Código de Barras EAN-13
+                    </h3>
+                    <p className="text-[11px] text-muted-foreground">
+                      NCM pesquisado pela IA e Gerador de EAN-13 válido (padrão GS1 Brasil)
+                    </p>
+                  </div>
+                </div>
+                {listing.variacoesSku && listing.variacoesSku.length > 0 && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleGenerateAllVariationEans}
+                    className="h-8 gap-1.5 rounded-xl text-xs font-semibold text-primary hover:bg-primary/10"
+                  >
+                    <Zap className="size-3.5" />
+                    Gerar EANs para Todas as Variações
+                  </Button>
+                )}
+              </div>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* NCM Card */}
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-foreground">
+                      NCM (Nomenclatura Comum do Mercosul)
+                    </span>
+                    {currentNcm && (
+                      <a
+                        href={`https://www.google.com/search?q=tabela+ncm+${encodeURIComponent(currentNcm.replace(/\D/g, ""))}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary"
+                        title="Ver detalhes na tabela NCM"
+                      >
+                        <span>Consultar</span>
+                        <ExternalLink className="size-2.5" />
+                      </a>
+                    )}
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={currentNcm}
+                      placeholder="Ex: 1905.90.90"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const updatedFicha = { ...listing.fichaTecnica };
+                        updatedFicha["NCM"] = { value: val, source: "usuario" };
+                        patch({ ncm: val, fichaTecnica: updatedFicha });
+                      }}
+                      className="h-9 flex-1 rounded-lg border border-border bg-background px-3 font-mono text-xs font-bold text-foreground"
+                    />
+                    {currentNcm && <CopyButton text={currentNcm} />}
+                  </div>
+                  <p className="mt-1.5 text-[10px] text-muted-foreground">
+                    Classificação fiscal sugerida com base no material e categoria do produto.
+                  </p>
+                </div>
+
+                {/* EAN-13 Card */}
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-foreground">
+                        EAN-13 Principal
+                      </span>
+                      {currentEan && validateEan13(currentEan) && (
+                        <span className="rounded bg-emerald-500/15 px-1.5 py-0.2 text-[9px] font-bold text-emerald-600">
+                          Válido
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleGenerateMainEan}
+                      className="flex items-center gap-1 text-[11px] font-bold text-primary hover:underline"
+                    >
+                      <Wand2 className="size-3" />
+                      Gerar Novo EAN
+                    </button>
+                  </div>
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={currentEan}
+                      placeholder="789... ou clique em Gerar"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const updatedFicha = { ...listing.fichaTecnica };
+                        updatedFicha["EAN"] = { value: val, source: "usuario" };
+                        patch({ ean: val, fichaTecnica: updatedFicha });
+                      }}
+                      className="h-9 flex-1 rounded-lg border border-border bg-background px-3 font-mono text-xs font-bold text-foreground"
+                    />
+                    {currentEan && <CopyButton text={currentEan} />}
+                  </div>
+                  <p className="mt-1.5 text-[10px] text-muted-foreground">
+                    Código de barras padrão brasileiro GS1 com cálculo oficial de checksum Módulo 10.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Variações Mapeadas com EAN Individual */}
             {listing.variacoesSku && listing.variacoesSku.length > 0 ? (
               <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-foreground">
-                  Variações e SKUs Gerados para Cadastro
+                  Variações, SKUs & Códigos EAN-13
                 </h3>
-                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
                   {listing.variacoesSku.map((v, i) => (
                     <div
                       key={i}
-                      className="flex items-center justify-between rounded-xl border border-border/70 bg-muted/30 p-3"
+                      className="rounded-xl border border-border/70 bg-muted/30 p-3"
                     >
-                      <div className="min-w-0 flex-1">
-                        <span className="text-xs font-semibold text-foreground">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-foreground">
                           {v.variacao}
                         </span>
-                        <p className="font-mono text-xs font-bold text-primary">
-                          {v.sku}
-                        </p>
+                        <CopyButton text={v.sku} label="Copiar SKU" />
                       </div>
-                      <CopyButton text={v.sku} label="Copiar" />
+                      <p className="mt-1 font-mono text-xs font-bold text-primary">
+                        SKU: {v.sku}
+                      </p>
+
+                      <div className="mt-2.5 flex items-center justify-between border-t border-border/50 pt-2 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] text-muted-foreground">EAN:</span>
+                          <span className="font-mono text-xs font-semibold text-foreground">
+                            {v.ean || "Sem EAN"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {v.ean ? (
+                            <CopyButton text={v.ean} label="Copiar EAN" />
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleGenerateVariationEan(i)}
+                              className="h-7 gap-1 rounded-lg text-[11px] font-bold text-primary"
+                            >
+                              <Zap className="size-3" />
+                              Gerar EAN
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -620,7 +848,7 @@ export function ProductDashboard({
               <div className="mb-3 flex items-center justify-between">
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                    Ficha Técnica Detalhada
+                    Ficha Técnica Detalhada (Inclui NCM e EAN)
                   </h3>
                   <p className="text-[11px] text-muted-foreground">
                     Dados com origem e rastreabilidade visual

@@ -144,17 +144,19 @@ Responda SOMENTE com JSON válido neste formato:
   "skuPai": "SKU Pai aglutinado da família do produto (ex: POPTPC150, BPLUVNITPR100, GMPOTRET24)",
   "skuFilho": "SKU Filho completo com variação (ex: POPTPC150-AZ) ou igual ao SKU Pai se não houver variação",
   "variacoesSku": [
-    { "variacao": "Nome da variação (ex: Azul, 250ml, Tam M)", "sku": "SKU filho correspondente (ex: POPTPC150-AZ)" }
+    { "variacao": "Nome da variação (ex: Azul, 250ml, Tam M)", "sku": "SKU filho correspondente (ex: POPTPC150-AZ)", "ean": "código EAN-13 se aplicável" }
   ],
   "nomeInterno": "nome curto e limpo para cadastro interno no Bling, sem termos de busca SEO (ex: Spray Pinta Cabelo Popper 150ml Azul)",
   "tituloMercadoLivre": "título de alta conversão para o Mercado Livre, natural e persuasivo, até 60 caracteres, apenas com dados confirmados",
+  "ncm": "código fiscal NCM exato com 8 dígitos formatado como 0000.00.00 (pesquise a classificação fiscal oficial do Mercosul baseada na categoria e composição do produto)",
+  "ean": "código de barras EAN-13 (13 dígitos numéricos) se visível no produto ou informado pelo usuário",
   "descricao": "descrição comercial profissional de alta conversão estruturada em seções claras (APRESENTAÇÃO DO PRODUTO, PRINCIPAIS CARACTERÍSTICAS E BENEFÍCIOS, ESPECIFICAÇÕES TÉCNICAS, CONTEÚDO DA EMBALAGEM, MODO DE USO / CUIDADOS, PERGUNTAS FREQUENTES) apenas com dados reais confirmados. Sem emojis exagerados, sem promessas falsas, texto fluido e profissional em português do Brasil.",
   "palavrasChave": { "principais": [], "relacionadas": [], "variacoes": [] },
   "fichaTecnica": {
     "Produto": { "value": "", "source": "usuario|imagem|pesquisa|nao_encontrado", "note": "opcional" },
-    "Marca": {...}, "Modelo": {...}, "Categoria": {...}, "Peso": {...}, "Dimensões": {...},
+    "Marca": {...}, "Modelo": {...}, "Categoria": {...}, "NCM": { "value": "código NCM 0000.00.00", "source": "pesquisa", "note": "Classificação fiscal Mercosul" }, "EAN": {...}, "Peso": {...}, "Dimensões": {...},
     "Quantidade": {...}, "Material": {...}, "Cor": {...}, "Sabor": {...}, "Conteúdo": {...},
-    "Fabricante": {...}, "EAN": {...}
+    "Fabricante": {...}
   },
   "caracteristicas": ["características REAIS visíveis ou confirmadas"],
   "alertas": ["conflitos entre fontes, informações que precisam ser confirmadas pelo usuário"],

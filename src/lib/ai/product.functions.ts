@@ -7,6 +7,7 @@ const productInputSchema = z.object({
   basicName: z.string().min(1),
   brand: z.string().optional(),
   ean: z.string().optional(),
+  ncm: z.string().optional(),
   category: z.string().optional(),
   cost: z.string().optional(),
   weight: z.string().optional(),

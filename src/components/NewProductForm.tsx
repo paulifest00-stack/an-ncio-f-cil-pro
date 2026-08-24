@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { quickScanPhoto } from "@/lib/ai/product.functions";
+import { generateValidEan13 } from "@/lib/ean";
 import type { Identificacao, ProductInput } from "@/lib/ai/types";
 
 const MAX_SIDE = 1400;
@@ -388,14 +389,36 @@ export function NewProductForm({
                       />
                     </div>
                     <div>
-                      <Label htmlFor="ean" className="mb-1.5 block text-xs font-medium text-muted-foreground">
-                        Código de Barras / EAN
-                      </Label>
+                      <div className="mb-1.5 flex items-center justify-between">
+                        <Label htmlFor="ean" className="text-xs font-medium text-muted-foreground">
+                          Código de Barras / EAN-13
+                        </Label>
+                        <button
+                          type="button"
+                          onClick={() => setField("ean", generateValidEan13("789"))}
+                          className="flex items-center gap-1 text-[10px] font-bold text-primary hover:underline"
+                        >
+                          <Zap className="size-3" />
+                          Gerar EAN-13
+                        </button>
+                      </div>
                       <Input
                         id="ean"
-                        placeholder="789..."
+                        placeholder="789... ou clique em Gerar"
                         value={optional["ean"] ?? ""}
                         onChange={(e) => setField("ean", e.target.value)}
+                        className="h-9 rounded-lg text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="ncm" className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                        NCM (Classificação Fiscal)
+                      </Label>
+                      <Input
+                        id="ncm"
+                        placeholder="Ex: 1905.90.90 ou deixe para a IA pesquisar"
+                        value={optional["ncm"] ?? ""}
+                        onChange={(e) => setField("ncm", e.target.value)}
                         className="h-9 rounded-lg text-xs font-mono"
                       />
                     </div>
