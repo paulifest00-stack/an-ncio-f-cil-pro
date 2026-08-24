@@ -1,16 +1,41 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Listing, ProductInput } from "./ai/types";
 
-// Credenciais do projeto Supabase ativo
-export const SUPABASE_URL =
-  process.env["VITE_SUPABASE_URL"] ||
-  "https://kqdawcxylqrrtufckgmd.supabase.co";
+// Acesso seguro a variáveis de ambiente (Browser, SSR e Lovable Preview)
+const getEnvVar = (name: string, fallback: string): string => {
+  try {
+    if (typeof import.meta !== "undefined" && import.meta.env && import.meta.env[name]) {
+      return import.meta.env[name];
+    }
+  } catch {
+    // ignore
+  }
+  try {
+    if (typeof process !== "undefined" && process.env && process.env[name]) {
+      return process.env[name] as string;
+    }
+  } catch {
+    // ignore
+  }
+  return fallback;
+};
 
-export const SUPABASE_ANON_KEY =
-  process.env["VITE_SUPABASE_ANON_KEY"] ||
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxZGF3Y3h5bHFycnR1ZmNrZ21kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2NjA3OTYsImV4cCI6MjEwMjIzNjc5Nn0.IJx0f0dRWiW1GsiJqzgA7LshevfN9vU7oJs3O_gpJHo";
+export const SUPABASE_URL = getEnvVar(
+  "VITE_SUPABASE_URL",
+  "https://kqdawcxylqrrtufckgmd.supabase.co",
+);
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const SUPABASE_ANON_KEY = getEnvVar(
+  "VITE_SUPABASE_ANON_KEY",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtxZGF3Y3h5bHFycnR1ZmNrZ21kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY2NjA3OTYsImV4cCI6MjEwMjIzNjc5Nn0.IJx0f0dRWiW1GsiJqzgA7LshevfN9vU7oJs3O_gpJHo",
+);
+
+export const supabase: SupabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+  },
+});
 
 export interface DbListing {
   id: string;
