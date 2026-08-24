@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
-import { History, Trash2, ArrowRight, Package, Clock, ExternalLink } from "lucide-react";
+import {
+  History,
+  Trash2,
+  ArrowRight,
+  Package,
+  Clock,
+  Cloud,
+  Database,
+  Loader2,
+} from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -12,15 +21,22 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import type { Listing, ProductInput } from "@/lib/ai/types";
+import {
+  deleteListingFromSupabase,
+  getRecentListingsFromSupabase,
+  saveListingToSupabase,
+  type DbListing,
+} from "@/lib/supabase";
 
 const RECENT_KEY = "anuncio_facil_recent_products";
-const MAX_ITEMS = 20;
+const MAX_ITEMS = 30;
 
 export interface SavedProduct {
   id: string;
   createdAt: number;
   input: ProductInput;
   listing: Listing;
+  isCloud?: boolean;
 }
 
 export function getSavedProducts(): SavedProduct[] {
@@ -36,14 +52,19 @@ export function getSavedProducts(): SavedProduct[] {
 
 export function saveProductToHistory(input: ProductInput, listing: Listing) {
   if (typeof window === "undefined") return;
+
+  // 1. Salva localmente de forma imediata
   try {
     const items = getSavedProducts();
-    const existingIdx = items.findIndex((i) => i.input.basicName === input.basicName);
+    const existingIdx = items.findIndex(
+      (i) => i.input.basicName === input.basicName && i.listing.sku === listing.sku,
+    );
     const newItem: SavedProduct = {
       id: crypto.randomUUID(),
       createdAt: Date.now(),
       input,
       listing,
+      isCloud: true,
     };
     let updated = [newItem, ...items.filter((_, idx) => idx !== existingIdx)];
     if (updated.length > MAX_ITEMS) {
@@ -53,6 +74,9 @@ export function saveProductToHistory(input: ProductInput, listing: Listing) {
   } catch {
     // ignore
   }
+
+  // 2. Salva no Supabase de forma assíncrona em background
+  void saveListingToSupabase(listing, input);
 }
 
 export function removeSavedProduct(id: string) {
@@ -63,6 +87,7 @@ export function removeSavedProduct(id: string) {
   } catch {
     // ignore
   }
+  void deleteListingFromSupabase(id);
 }
 
 export function clearSavedProducts() {
@@ -71,29 +96,79 @@ export function clearSavedProducts() {
 }
 
 interface RecentListingsProps {
-  onSelect: (item: SavedProduct) => void;
+  onSelect: (item: { input: ProductInput; listing: Listing }) => void;
 }
 
 export function RecentListings({ onSelect }: RecentListingsProps) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<SavedProduct[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const refresh = () => setItems(getSavedProducts());
+  const loadAll = async () => {
+    setLoading(true);
+    // 1. Carrega local primeiro (instantâneo)
+    const local = getSavedProducts();
+    setItems(local);
+
+    // 2. Sincroniza com o Supabase
+    try {
+      const cloudList = await getRecentListingsFromSupabase(MAX_ITEMS);
+      if (cloudList && cloudList.length > 0) {
+        const mapped: SavedProduct[] = cloudList.map((db: DbListing) => ({
+          id: db.id,
+          createdAt: new Date(db.created_at).getTime(),
+          input: (db.user_input || {
+            basicName: db.nome_interno,
+            photoDataUrl: db.photo_url || "",
+          }) as ProductInput,
+          listing: {
+            sku: db.sku,
+            skuPai: db.sku_pai,
+            skuFilho: db.sku_filho,
+            variacoesSku: db.variacoes_sku,
+            nomeInterno: db.nome_interno,
+            tituloMercadoLivre: db.titulo_mercadolivre,
+            descricao: db.descricao || "",
+            palavrasChave: db.palavras_chave || {
+              principais: [],
+              relacionadas: [],
+              variacoes: [],
+            },
+            fichaTecnica: db.ficha_tecnica || {},
+            caracteristicas: db.caracteristicas || [],
+            alertas: db.alertas || [],
+            resumo: db.resumo || "",
+            imagens: db.imagens || [],
+            identificacao: db.identificacao,
+            referencias: db.referencias,
+          },
+          isCloud: true,
+        }));
+        setItems(mapped);
+      }
+    } catch {
+      // mantém os locais se falhar a rede
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    if (open) refresh();
+    if (open) {
+      void loadAll();
+    }
   }, [open]);
 
   const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     removeSavedProduct(id);
-    refresh();
-    toast.success("Produto removido do histórico.");
+    setItems((prev) => prev.filter((i) => i.id !== id));
+    toast.success("Produto removido.");
   };
 
   const handleClearAll = () => {
     clearSavedProducts();
-    refresh();
+    setItems([]);
     toast.success("Histórico limpo.");
   };
 
@@ -110,9 +185,13 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-          <History className="size-3.5" />
-          <span>Histórico</span>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5 text-xs font-medium"
+        >
+          <Database className="size-3.5 text-primary" />
+          <span>Banco Supabase</span>
           {items.length > 0 && (
             <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
               {items.length}
@@ -122,12 +201,14 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
       </SheetTrigger>
 
       <SheetContent side="right" className="w-full sm:max-w-md">
-        <SheetHeader className="pb-4 border-b border-border">
+        <SheetHeader className="border-b border-border pb-4">
           <div className="flex items-center justify-between">
-            <SheetTitle className="flex items-center gap-2 text-base font-semibold">
-              <Package className="size-4 text-primary" />
-              Produtos Recentes
-            </SheetTitle>
+            <div className="flex items-center gap-2">
+              <Cloud className="size-5 text-primary" />
+              <SheetTitle className="text-base font-semibold">
+                Anúncios Salvos na Nuvem
+              </SheetTitle>
+            </div>
             {items.length > 0 && (
               <Button
                 variant="ghost"
@@ -140,17 +221,22 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
             )}
           </div>
           <SheetDescription className="text-xs">
-            Seus anúncios gerados ficam salvos localmente para acesso rápido sem novo processamento.
+            Seus anúncios gerados ficam salvos de forma permanente no banco de dados Supabase.
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-4 space-y-3 overflow-y-auto max-h-[calc(100vh-140px)] pr-1">
-          {items.length === 0 ? (
+        <div className="mt-4 max-h-[calc(100vh-140px)] space-y-3 overflow-y-auto pr-1">
+          {loading && items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-              <Package className="size-10 stroke-1 mb-2 opacity-40" />
-              <p className="text-sm font-medium">Nenhum produto salvo ainda</p>
-              <p className="text-xs mt-1 max-w-[200px]">
-                Os produtos que você gerar aparecerão aqui automaticamente.
+              <Loader2 className="mb-2 size-8 animate-spin text-primary" />
+              <p className="text-sm font-medium">Carregando do Supabase...</p>
+            </div>
+          ) : items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+              <Package className="mb-2 size-10 opacity-40 stroke-1" />
+              <p className="text-sm font-medium">Nenhum anúncio salvo ainda</p>
+              <p className="mt-1 max-w-[220px] text-xs">
+                Todo anúncio que você gerar será automaticamente salvo no Supabase e listado aqui.
               </p>
             </div>
           ) : (
@@ -158,25 +244,31 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
               <div
                 key={item.id}
                 onClick={() => {
-                  onSelect(item);
+                  onSelect({ input: item.input, listing: item.listing });
                   setOpen(false);
                 }}
-                className="group relative flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-card p-3 transition-all hover:border-primary/50 hover:shadow-sm"
+                className="group relative flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-card p-3 transition-all hover:border-primary/50 hover:shadow-xs"
               >
-                <img
-                  src={item.input.photoDataUrl}
-                  alt={item.input.basicName}
-                  className="size-12 rounded-lg border border-border object-cover shrink-0"
-                />
+                {item.input.photoDataUrl ? (
+                  <img
+                    src={item.input.photoDataUrl}
+                    alt={item.input.basicName}
+                    className="size-12 shrink-0 rounded-lg border border-border object-cover"
+                  />
+                ) : (
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-lg border border-border bg-muted">
+                    <Package className="size-5 text-muted-foreground" />
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <h4 className="truncate text-xs font-semibold text-foreground group-hover:text-primary">
                     {item.listing.nomeInterno || item.input.basicName}
                   </h4>
                   <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">
-                    <span className="font-mono text-[10px] bg-muted px-1.5 py-0.5 rounded">
+                    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] font-medium">
                       {item.listing.sku}
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 text-[10px]">
                       <Clock className="size-3" />
                       {formatDate(item.createdAt)}
                     </span>
@@ -186,8 +278,9 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
                   <Button
                     size="icon"
                     variant="ghost"
-                    className="size-7 opacity-0 group-hover:opacity-100 text-destructive hover:bg-destructive/10"
+                    className="size-7 text-destructive opacity-0 hover:bg-destructive/10 group-hover:opacity-100"
                     onClick={(e) => handleDelete(item.id, e)}
+                    title="Excluir"
                   >
                     <Trash2 className="size-3.5" />
                   </Button>
