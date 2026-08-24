@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { AiCreditsBadge } from "@/components/AiCreditsBadge";
 import { NewProductForm } from "@/components/NewProductForm";
 import { Processing } from "@/components/Processing";
 import { ProductDashboard } from "@/components/ProductDashboard";
