@@ -79,6 +79,7 @@ export interface ImageBrief {
   prompt: string;
   observacoes: string;
   plano?: ImagePlan;
+  url?: string;
 }
 
 export interface SkuVariacao {

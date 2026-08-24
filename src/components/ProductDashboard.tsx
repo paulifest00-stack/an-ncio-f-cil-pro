@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertTriangle,
   ArrowLeft,
   Barcode,
   Check,
+  ChevronDown,
   ChevronRight,
+  Code,
   Copy,
   Download,
   ExternalLink,
@@ -27,6 +29,7 @@ import {
   ShoppingCart,
   Sparkles,
   Tag,
+  Trash2,
   Wand2,
   Zap,
 } from "lucide-react";
@@ -48,6 +51,7 @@ import {
 } from "@/lib/ai/product.functions";
 import { registerUsage } from "@/lib/usage";
 import { formatEan13, generateValidEan13, validateEan13 } from "@/lib/ean";
+import { saveProductToHistory } from "@/components/RecentListings";
 
 const SOURCE_LABEL: Record<Field["source"], string> = {
   usuario: "Informado por você",
@@ -131,9 +135,27 @@ export function ProductDashboard({
   const [imageState, setImageState] = useState<
     Record<number, { loading: boolean; url?: string; error?: string }>
   >({});
+  const [expandedPrompt, setExpandedPrompt] = useState<Record<number, boolean>>({});
   const [error, setError] = useState<string | null>(null);
 
-  const patch = (p: Partial<Listing>) => setListing({ ...listing, ...p });
+  // Inicializa o estado das imagens com base no que já foi salvo anteriormente
+  useEffect(() => {
+    if (listing.imagens && listing.imagens.length > 0) {
+      const initial: Record<number, { loading: boolean; url?: string }> = {};
+      listing.imagens.forEach((img, idx) => {
+        if (img.url) {
+          initial[idx] = { loading: false, url: img.url };
+        }
+      });
+      setImageState((prev) => ({ ...initial, ...prev }));
+    }
+  }, [listing.imagens]);
+
+  const patch = (p: Partial<Listing>) => {
+    const updated = { ...listing, ...p };
+    setListing(updated);
+    saveProductToHistory(input, updated);
+  };
 
   const regen = async (section: ListingSection) => {
     setBusy(section);
@@ -159,6 +181,13 @@ export function ProductDashboard({
       });
       registerUsage("imagem");
       setImageState((s) => ({ ...s, [index]: { loading: false, url } }));
+
+      // Salva a imagem gerada na listagem e persiste automaticamente no Supabase / Histórico
+      const updatedImagens = [...listing.imagens];
+      if (updatedImagens[index]) {
+        updatedImagens[index] = { ...updatedImagens[index], url };
+      }
+      patch({ imagens: updatedImagens });
     } catch (e) {
       setImageState((s) => ({
         ...s,
@@ -168,6 +197,15 @@ export function ProductDashboard({
         },
       }));
     }
+  };
+
+  const handleDeleteImage = (index: number) => {
+    setImageState((s) => ({ ...s, [index]: { loading: false, url: undefined } }));
+    const updatedImagens = [...listing.imagens];
+    if (updatedImagens[index]) {
+      updatedImagens[index] = { ...updatedImagens[index], url: undefined };
+    }
+    patch({ imagens: updatedImagens });
   };
 
   const handleGenerateMainEan = () => {
@@ -195,9 +233,6 @@ export function ProductDashboard({
   };
 
   const id = listing.identificacao;
-  const objImg = listing.imagens.find((i) => i.tipo === "objecoes");
-  const plano = objImg?.plano;
-
   const currentNcm = listing.ncm || listing.fichaTecnica?.["NCM"]?.value || "";
   const currentEan = listing.ean || listing.fichaTecnica?.["EAN"]?.value || "";
 
@@ -323,6 +358,8 @@ export function ProductDashboard({
                 ? listing.referencias?.length
                 : tab.id === "sku"
                 ? listing.variacoesSku?.length
+                : tab.id === "imagens"
+                ? listing.imagens?.length
                 : undefined;
 
             return (
@@ -880,7 +917,7 @@ export function ProductDashboard({
           </motion.div>
         )}
 
-        {/* ABA 5: IMAGENS 1:1 & LAYOUT */}
+        {/* ABA 5: IMAGENS 1:1, PROMPTS & LAYOUT */}
         {activeTab === "imagens" && (
           <motion.div
             key="imagens"
@@ -888,119 +925,240 @@ export function ProductDashboard({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-            className="space-y-4"
+            className="space-y-6"
           >
-            {/* Regras e Especificações da Imagem */}
+            {/* Cabeçalho explicativo */}
             <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                    Plano de Imagem de Quebra de Objeções (Proporção 1:1 Quadrada)
+                    Galeria de Imagens do Anúncio (Proporção 1:1 Quadrada)
                   </h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    Regra absoluta: Imagem perfeitamente quadrada com recorte e cor de acento
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Gere fotos profissionais para o catálogo do Mercado Livre ou copie os prompts para usar em IAs externas (Midjourney, DALL-E, Flux, Ideogram).
                   </p>
                 </div>
                 {id?.corAcento && (
-                  <div className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-2.5 py-1 text-xs">
-                    <Palette className="size-3.5" />
+                  <div className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/40 px-3 py-1 text-xs">
+                    <Palette className="size-3.5 text-primary" />
+                    <span className="text-[11px] text-muted-foreground">Cor de Acento:</span>
                     <span
-                      className="size-3 rounded-full border border-black/20"
+                      className="size-3.5 rounded-full border border-black/20"
                       style={{ backgroundColor: id.corAcento }}
                     />
-                    <span className="font-mono text-[11px]">{id.corAcento}</span>
+                    <span className="font-mono text-[11px] font-bold">{id.corAcento}</span>
                   </div>
                 )}
               </div>
-
-              {plano ? (
-                <div className="mt-4 space-y-4 text-xs">
-                  {plano.tituloBloco && (
-                    <div className="rounded-xl bg-muted/40 p-3.5">
-                      <span className="font-bold uppercase tracking-wider text-muted-foreground text-[10px]">
-                        Bloco de Título (3 Linhas)
-                      </span>
-                      <p className="mt-1 font-bold text-foreground text-sm">
-                        {plano.tituloBloco.linha1} {plano.tituloBloco.linha2}{" "}
-                        {plano.tituloBloco.linha3}
-                      </p>
-                    </div>
-                  )}
-
-                  {plano.pontos && (
-                    <div>
-                      <span className="font-bold uppercase tracking-wider text-muted-foreground text-[10px]">
-                        Pontos de Quebra de Objeção (Caixa Alta até 5 Palavras)
-                      </span>
-                      <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {plano.pontos.map((p, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center gap-2 rounded-xl border border-border/60 bg-muted/20 p-2.5"
-                          >
-                            <span className="text-base">{p.icone}</span>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-bold text-foreground text-xs">{p.texto}</p>
-                              <span className="text-[10px] text-muted-foreground">
-                                {p.origem}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ) : null}
             </div>
 
-            {/* Gerador de Imagem com IA */}
-            <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
-                    Gerar Imagem de Anúncio com IA
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground">
-                    Gera uma imagem quadrada 1:1 com recorte profissional
-                  </p>
-                </div>
-                {objImg && (
-                  <motion.div whileTap={{ scale: 0.95 }}>
-                    <Button
-                      size="sm"
-                      onClick={() => renderImage(0, objImg)}
-                      disabled={imageState[0]?.loading}
-                      className="gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white shadow-md"
-                    >
-                      {imageState[0]?.loading ? (
-                        <Loader2 className="size-3.5 animate-spin" />
-                      ) : (
-                        <Sparkles className="size-3.5" />
-                      )}
-                      <span>Gerar Imagem 1:1</span>
-                    </Button>
-                  </motion.div>
-                )}
-              </div>
+            {/* Grid com TODAS as 4 Imagens do Anúncio */}
+            <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+              {listing.imagens.map((brief, idx) => {
+                const state = imageState[idx] || {};
+                const isPromptOpen = !!expandedPrompt[idx];
+                const hasPlano = brief.tipo === "objecoes" && brief.plano;
 
-              {imageState[0]?.url && (
-                <div className="mt-4 flex flex-col items-center gap-3">
-                  <img
-                    src={imageState[0].url}
-                    alt="Imagem gerada pela IA"
-                    className="size-72 rounded-2xl border border-border object-cover shadow-lg"
-                  />
-                  <a
-                    href={imageState[0].url}
-                    download="anuncio-1x1.png"
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-xs font-semibold text-foreground hover:bg-accent"
+                return (
+                  <div
+                    key={idx}
+                    className="flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm transition-all hover:border-primary/40"
                   >
-                    <Download className="size-3.5" />
-                    Baixar Imagem 1:1
-                  </a>
-                </div>
-              )}
+                    <div>
+                      {/* Topo do Card de Imagem */}
+                      <div className="flex items-start justify-between gap-2 border-b border-border/60 pb-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant="outline"
+                              className="rounded-lg px-2 py-0 text-[10px] font-bold uppercase tracking-wider text-primary"
+                            >
+                              Foto {idx + 1} • {brief.tipo.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <h4 className="mt-1 text-sm font-bold text-foreground">
+                            {brief.titulo}
+                          </h4>
+                          <p className="mt-0.5 text-[11px] text-muted-foreground">
+                            {brief.observacoes}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Se for Imagem de Quebra de Objeções, exibe os pontos do plano */}
+                      {hasPlano && brief.plano && (
+                        <div className="mt-3 space-y-2 rounded-xl bg-muted/30 p-3 text-xs">
+                          {brief.plano.tituloBloco && (
+                            <div>
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                Bloco de Título (3 Linhas)
+                              </span>
+                              <p className="font-bold text-foreground">
+                                {brief.plano.tituloBloco.linha1} {brief.plano.tituloBloco.linha2}{" "}
+                                {brief.plano.tituloBloco.linha3}
+                              </p>
+                            </div>
+                          )}
+                          {brief.plano.pontos && brief.plano.pontos.length > 0 && (
+                            <div className="border-t border-border/40 pt-1.5">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                                Diferenciais Visuais
+                              </span>
+                              <div className="mt-1 grid grid-cols-1 gap-1">
+                                {brief.plano.pontos.map((p, pIdx) => (
+                                  <div
+                                    key={pIdx}
+                                    className="flex items-center gap-1.5 text-[11px] text-foreground"
+                                  >
+                                    <span>{p.icone}</span>
+                                    <span className="font-semibold">{p.texto}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Exibição da Imagem Gerada (se existir) */}
+                      {state.url ? (
+                        <div className="mt-4 flex flex-col items-center gap-3">
+                          <div className="relative group w-full aspect-square overflow-hidden rounded-xl border border-border bg-muted/40 shadow-inner">
+                            <img
+                              src={state.url}
+                              alt={brief.titulo}
+                              className="size-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 p-4">
+                              <a
+                                href={state.url}
+                                download={`imagem-${idx + 1}-${brief.tipo}.png`}
+                                className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-black shadow-lg hover:bg-neutral-100 transition-transform active:scale-95 flex items-center gap-1.5"
+                              >
+                                <Download className="size-3.5" />
+                                Baixar 1:1
+                              </a>
+                            </div>
+                          </div>
+
+                          <div className="flex w-full items-center justify-between gap-2">
+                            <a
+                              href={state.url}
+                              download={`imagem-${idx + 1}-${brief.tipo}.png`}
+                              className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-accent"
+                            >
+                              <Download className="size-3.5" />
+                              Baixar Imagem 1:1
+                            </a>
+
+                            <div className="flex items-center gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => renderImage(idx, brief)}
+                                disabled={state.loading}
+                                className="h-8 gap-1 rounded-xl text-xs"
+                                title="Gerar uma nova versão com a IA"
+                              >
+                                {state.loading ? (
+                                  <Loader2 className="size-3 animate-spin" />
+                                ) : (
+                                  <RefreshCw className="size-3" />
+                                )}
+                                <span>Regenerar</span>
+                              </Button>
+
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleDeleteImage(idx)}
+                                className="h-8 w-8 rounded-xl p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                title="Excluir imagem gerada"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {/* Mensagem de Erro se Houver */}
+                      {state.error && (
+                        <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive">
+                          {state.error}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Rodapé do Card: Prompt da IA e Ação de Gerar */}
+                    <div className="mt-4 space-y-2.5 border-t border-border/60 pt-3">
+                      {/* Gaveta Recolhível do Prompt */}
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setExpandedPrompt((prev) => ({
+                              ...prev,
+                              [idx]: !prev[idx],
+                            }))
+                          }
+                          className="flex items-center gap-1.5 text-[11px] font-semibold text-muted-foreground hover:text-foreground"
+                        >
+                          <Code className="size-3 text-primary" />
+                          <span>{isPromptOpen ? "Ocultar Prompt da IA" : "Ver Prompt da IA"}</span>
+                          <ChevronDown
+                            className={`size-3 transition-transform duration-200 ${
+                              isPromptOpen ? "rotate-180" : ""
+                            }`}
+                          />
+                        </button>
+
+                        <AnimatePresence>
+                          {isPromptOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="mt-2 overflow-hidden"
+                            >
+                              <div className="rounded-xl bg-muted/40 p-3 text-[11px]">
+                                <div className="mb-1.5 flex items-center justify-between">
+                                  <span className="font-bold text-muted-foreground uppercase text-[9px] tracking-wider">
+                                    Prompt Fotográfico (Inglês)
+                                  </span>
+                                  <CopyButton text={brief.prompt} label="Copiar Prompt" />
+                                </div>
+                                <p className="font-mono text-foreground leading-relaxed">
+                                  {brief.prompt}
+                                </p>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* Botão de Geração se ainda não foi gerada */}
+                      {!state.url && (
+                        <motion.div whileTap={{ scale: 0.96 }}>
+                          <Button
+                            size="sm"
+                            onClick={() => renderImage(idx, brief)}
+                            disabled={state.loading}
+                            className="w-full gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:from-blue-700 hover:to-indigo-700"
+                          >
+                            {state.loading ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <Sparkles className="size-3.5" />
+                            )}
+                            <span>Gerar Imagem 1:1 com IA</span>
+                          </Button>
+                        </motion.div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         )}

@@ -57,6 +57,60 @@ function normalizeField(raw: unknown): Field {
   };
 }
 
+function deduplicateWords(text: string): string {
+  if (!text) return "";
+  const words = text.trim().split(/\s+/);
+  const seen = new Set<string>();
+  const clean: string[] = [];
+
+  for (const w of words) {
+    const lower = w.toLowerCase().replace(/[^a-záàâãéèêíïóôõöúçñ0-9]/gi, "");
+    // Preserva conectivos como de, com, para, em, e
+    if (["de", "com", "para", "em", "e", "do", "da", "dos", "das", "no", "na", "nos", "nas"].includes(lower)) {
+      clean.push(w);
+      continue;
+    }
+    if (lower.length > 2 && seen.has(lower)) {
+      continue;
+    }
+    if (lower.length > 2) {
+      seen.add(lower);
+    }
+    clean.push(w);
+  }
+  return clean.join(" ");
+}
+
+function defaultImagesForProduct(input: ProductInput, name: string): ImageBrief[] {
+  const prodName = name || input.basicName || "Produto";
+  return [
+    {
+      tipo: "principal",
+      titulo: "Foto Principal (Fundo Branco #FFFFFF)",
+      prompt: `commercial product photography of ${prodName}, isolated on a pure seamless clean white background #FFFFFF, studio lighting, soft shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format`,
+      observacoes: "Padrão oficial Mercado Livre para primeira foto de catálogo (Fundo Branco Puro)",
+    },
+    {
+      tipo: "objecoes",
+      titulo: "Arte de Quebra de Objeções (Infográfico)",
+      prompt: `commercial advertising infographic banner for ${prodName}, square 1:1, modern clean vector badges with checkmarks, crisp typography, studio lighting`,
+      observacoes: "Infográfico persuasivo com layout e cores de destaque da embalagem",
+    },
+    {
+      tipo: "detalhes",
+      titulo: "Foto de Detalhes / Textura / Rótulo",
+      prompt: `macro close-up photography of ${prodName}, highlighting premium materials, label typography and packaging finish, soft studio lighting, sharp textures, square 1:1`,
+      observacoes: "Destaque de qualidade, bico/tampa, textura ou acabamento da embalagem",
+    },
+    {
+      tipo: "contexto",
+      titulo: "Foto em Uso / Ambiente Realista",
+      prompt: `lifestyle commercial photography of ${prodName} in real everyday usage scenario, aesthetically pleasing background, warm natural lighting, professional advertising shot, square 1:1`,
+      observacoes: "Foto humanizada demonstrando o produto em uso real para gerar conexão emocional",
+    },
+  ];
+}
+
 function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
   const ficha: Record<string, Field> = {};
   const rawFicha = (raw.fichaTecnica ?? {}) as Record<string, unknown>;
@@ -83,14 +137,36 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
     input.ean ||
     "";
 
+  const cleanNomeInterno = deduplicateWords(raw.nomeInterno ?? input.basicName);
+  const cleanTituloMl = deduplicateWords(raw.tituloMercadoLivre ?? input.basicName);
+
+  const rawImgs = (raw.imagens ?? []) as ImageBrief[];
+  const defaultImgs = defaultImagesForProduct(input, cleanNomeInterno);
+  const mergedImagens: ImageBrief[] = [];
+
+  for (const def of defaultImgs) {
+    const found = rawImgs.find((img) => img.tipo === def.tipo);
+    if (found) {
+      mergedImagens.push({
+        ...def,
+        ...found,
+        titulo: found.titulo || def.titulo,
+        prompt: found.prompt || def.prompt,
+        observacoes: found.observacoes || def.observacoes,
+      });
+    } else {
+      mergedImagens.push(def);
+    }
+  }
+
   return {
     resumo: raw.resumo ?? "",
     sku: raw.sku ?? raw.skuFilho ?? raw.skuPai ?? "",
     skuPai: raw.skuPai ?? "",
     skuFilho: raw.skuFilho ?? "",
     variacoesSku: raw.variacoesSku ?? [],
-    nomeInterno: raw.nomeInterno ?? input.basicName,
-    tituloMercadoLivre: raw.tituloMercadoLivre ?? input.basicName,
+    nomeInterno: cleanNomeInterno,
+    tituloMercadoLivre: cleanTituloMl,
     ncm: ncmValue,
     ean: eanValue,
     descricao: raw.descricao ?? "",
@@ -102,7 +178,7 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
     fichaTecnica: ficha,
     caracteristicas: raw.caracteristicas ?? [],
     alertas: raw.alertas ?? [],
-    imagens: raw.imagens ?? [],
+    imagens: mergedImagens,
   };
 }
 
@@ -237,16 +313,14 @@ export async function scanProductPhoto(
     };
   }
 
-  // Monta sugestões limpas para pré-preenchimento
-  const basicName = [
+  // Monta sugestões limpas para pré-preenchimento sem duplicações
+  const rawParts = [
     idResult.produto,
-    idResult.linha,
-    idResult.volume,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .replace(/\s+/g, " ")
-    .trim();
+    idResult.linha && !idResult.produto.toLowerCase().includes(idResult.linha.toLowerCase()) ? idResult.linha : "",
+    idResult.volume && !idResult.produto.toLowerCase().includes(idResult.volume.toLowerCase()) ? idResult.volume : "",
+  ].filter(Boolean);
+
+  const basicName = deduplicateWords(rawParts.join(" "));
 
   // Tenta extrair EAN de leituraEmbalagem se houver
   const eanMatch = idResult.leituraEmbalagem?.find((t) => /^\d{8,14}$/.test(t.replace(/\D/g, "")));

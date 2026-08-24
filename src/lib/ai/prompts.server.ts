@@ -90,7 +90,10 @@ Você recebeu a foto de um produto. Execute em ordem:
 
 PASSO 1 — IDENTIFICAR
 Descubra exatamente qual é o produto: marca, linha, variação e volume/tamanho/quantidade, lendo o que está escrito na embalagem da foto.
+Ao identificar produtos comerciais conhecidos do mercado brasileiro (ex: potes plásticos Gourmet/Gour Max, tintas spray Popper, balões Pic Pic, luvas Bompack, doces Yoki), use o padrão de catálogo comercial da marca. Se o produto tem apresentação típica conhecida (ex: pacote/caixa com 24 unidades, 50un, 100un), preencha "volume" e "quantidade" com essa especificação comercial confirmada.
 Se não tiver certeza, registre em "duvidas". Não adivinhe.
+
+Regra anti-redundância: No campo "produto" e "linha", NUNCA repita a mesma palavra (ex: use "Tinta Temporária Spray para Cabelo", NUNCA "Spray Tinta Spray").
 
 Também nesta etapa:
 - Transcreva em "leituraEmbalagem" cada texto legível na embalagem (marca, linha, peso, quantidade, sabor, avisos).
@@ -146,8 +149,8 @@ Responda SOMENTE com JSON válido neste formato:
   "variacoesSku": [
     { "variacao": "Nome da variação (ex: Azul, 250ml, Tam M)", "sku": "SKU filho correspondente (ex: POPTPC150-AZ)", "ean": "código EAN-13 se aplicável" }
   ],
-  "nomeInterno": "nome curto e limpo para cadastro interno no Bling, sem termos de busca SEO (ex: Spray Pinta Cabelo Popper 150ml Azul)",
-  "tituloMercadoLivre": "título de alta conversão para o Mercado Livre, natural e persuasivo, até 60 caracteres, apenas com dados confirmados",
+  "nomeInterno": "nome curto e limpo para cadastro interno no Bling, sem termos de busca SEO e SEM repetições de palavras (ex: Spray Pinta Cabelo Popper 150ml Azul)",
+  "tituloMercadoLivre": "título de alta conversão para o Mercado Livre, natural e persuasivo, até 60 caracteres, apenas com dados confirmados. REGRA ABSOLUTA: NUNCA repita a mesma palavra no título (ex: evite repetir 'Spray' no início e no fim).",
   "ncm": "código fiscal NCM exato com 8 dígitos formatado como 0000.00.00 (pesquise a classificação fiscal oficial do Mercosul baseada na categoria e composição do produto)",
   "ean": "código de barras EAN-13 (13 dígitos numéricos) se visível no produto ou informado pelo usuário",
   "descricao": "descrição comercial profissional de alta conversão estruturada em seções claras (APRESENTAÇÃO DO PRODUTO, PRINCIPAIS CARACTERÍSTICAS E BENEFÍCIOS, ESPECIFICAÇÕES TÉCNICAS, CONTEÚDO DA EMBALAGEM, MODO DE USO / CUIDADOS, PERGUNTAS FREQUENTES) apenas com dados reais confirmados. Sem emojis exagerados, sem promessas falsas, texto fluido e profissional em português do Brasil.",
@@ -161,10 +164,10 @@ Responda SOMENTE com JSON válido neste formato:
   "caracteristicas": ["características REAIS visíveis ou confirmadas"],
   "alertas": ["conflitos entre fontes, informações que precisam ser confirmadas pelo usuário"],
   "imagens": [
-    { "tipo": "principal", "titulo": "Foto Principal (Fundo Branco)", "prompt": "prompt fotográfico em inglês", "observacoes": "" },
-    { "tipo": "objecoes", "titulo": "Arte de Quebra de Objeções (Infográfico)", "prompt": "", "observacoes": "" },
-    { "tipo": "detalhes", "titulo": "Foto de Detalhes / Textura / Rótulo", "prompt": "", "observacoes": "" },
-    { "tipo": "contexto", "titulo": "Foto em Uso / Ambiente", "prompt": "", "observacoes": "" }
+    { "tipo": "principal", "titulo": "Foto Principal (Fundo Branco #FFFFFF)", "prompt": "commercial product photography of the product isolated on a pure seamless white background #FFFFFF, studio lighting, sharp focus, 1:1 square format", "observacoes": "Padrão oficial para primeira foto do Mercado Livre" },
+    { "tipo": "objecoes", "titulo": "Arte de Quebra de Objeções (Infográfico)", "prompt": "infographic commercial advertising banner, square 1:1, crisp vector badges, clean modern layout", "observacoes": "Infográfico com layout e cor de destaque da embalagem" },
+    { "tipo": "detalhes", "titulo": "Foto de Detalhes / Textura / Rótulo", "prompt": "macro detailed photography of the product label, texture and packaging details, studio lighting, crisp 1:1 square", "observacoes": "Destaque de qualidade, bico, tampa ou textura do produto" },
+    { "tipo": "contexto", "titulo": "Foto em Uso / Ambiente Realista", "prompt": "lifestyle commercial advertisement photography of the product in real use context, modern clean setting, professional 1:1 square", "observacoes": "Foto ambientalizada mostrando o produto em uso real" }
   ]
 }
 Campos da ficha sem informação: {"value": "Não identificado", "source": "nao_encontrado"}.

@@ -123,6 +123,45 @@ export async function getRecentListingsFromSupabase(
   }
 }
 
+/** Atualiza um anúncio existente no banco de dados Supabase */
+export async function updateListingInSupabase(
+  id: string,
+  listing: Listing,
+): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from("listings")
+      .update({
+        sku: listing.sku,
+        sku_pai: listing.skuPai,
+        sku_filho: listing.skuFilho,
+        variacoes_sku: listing.variacoesSku ?? [],
+        nome_interno: listing.nomeInterno,
+        titulo_mercadolivre: listing.tituloMercadoLivre,
+        descricao: listing.descricao,
+        palavras_chave: listing.palavrasChave,
+        ficha_tecnica: listing.fichaTecnica,
+        caracteristicas: listing.caracteristicas,
+        alertas: listing.alertas,
+        resumo: listing.resumo,
+        imagens: listing.imagens,
+        identificacao: listing.identificacao,
+        referencias: listing.referencias,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", id);
+
+    if (error) {
+      console.warn("Erro ao atualizar no Supabase:", error.message);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.warn("Falha de rede ao atualizar no Supabase:", err);
+    return false;
+  }
+}
+
 /** Exclui um anúncio do banco de dados Supabase */
 export async function deleteListingFromSupabase(
   id: string,
@@ -134,3 +173,4 @@ export async function deleteListingFromSupabase(
     return false;
   }
 }
+

@@ -128,6 +128,8 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
             variacoesSku: db.variacoes_sku,
             nomeInterno: db.nome_interno,
             tituloMercadoLivre: db.titulo_mercadolivre,
+            ncm: db.ficha_tecnica?.["NCM"]?.value,
+            ean: db.ficha_tecnica?.["EAN"]?.value,
             descricao: db.descricao || "",
             palavrasChave: db.palavras_chave || {
               principais: [],
