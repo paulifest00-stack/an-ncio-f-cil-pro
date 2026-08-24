@@ -94,51 +94,71 @@ function buildSearchReferences(
   id: Identificacao,
   input: ProductInput,
 ): Referencia[] {
-  const terms =
+  // Termo limpo e seguro para pesquisa
+  const rawTerms =
     id.termosBusca && id.termosBusca.length > 0
       ? id.termosBusca[0]
       : `${id.marca || input.brand || ""} ${id.produto || input.basicName || ""} ${id.volume || ""}`.trim();
 
-  const encodedTerm = encodeURIComponent(terms);
-  const mlSlug = encodeURIComponent(terms.replace(/\s+/g, "-"));
+  // Limpa caracteres especiais, parênteses e pontuação que quebram URLs
+  const cleanTerms = rawTerms
+    .replace(/[^\w\s\u00C0-\u00FF]/gi, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const brand = (id.marca || input.brand || "").trim();
+  const encodedTerm = encodeURIComponent(cleanTerms);
+
+  // Slug seguro para o Mercado Livre (sem acentos e apenas letras/números/hífens)
+  const mlSlug = cleanTerms
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "-");
 
   const refs: Referencia[] = [
     {
-      titulo: `Mercado Livre — ${terms}`,
+      titulo: `Mercado Livre — ${cleanTerms}`,
       url: `https://lista.mercadolivre.com.br/${mlSlug}`,
       tipo: "marketplace",
-      observacao: "Ver anúncios concorrentes, preços, fotos e descrições no ML",
+      observacao: "Ver anúncios concorrentes, preços reais e descrições no Mercado Livre",
     },
     {
-      titulo: `Amazon Brasil — ${terms}`,
+      titulo: `Amazon Brasil — ${cleanTerms}`,
       url: `https://www.amazon.com.br/s?k=${encodedTerm}`,
       tipo: "marketplace",
-      observacao: "Ver perguntas frequentes, avaliações e detalhes na Amazon",
+      observacao: "Ver perguntas de compradores, avaliações e detalhes na Amazon",
     },
     {
-      titulo: `Shopee — ${terms}`,
+      titulo: `Google Imagens (Fotos Reais) — ${cleanTerms}`,
+      url: `https://www.google.com/search?q=${encodedTerm}&tbm=isch`,
+      tipo: "busca",
+      observacao: "Encontrar imagens em alta resolução e fotos de catálogo reais",
+    },
+    {
+      titulo: `Shopee — ${cleanTerms}`,
       url: `https://shopee.com.br/search?keyword=${encodedTerm}`,
       tipo: "marketplace",
-      observacao: "Ver variações, combos e fotos reais na Shopee",
+      observacao: "Ver variações, combos e fotos na Shopee",
     },
     {
-      titulo: `Google Shopping & Busca — ${terms}`,
-      url: `https://www.google.com/search?q=${encodedTerm}&tbm=shop`,
+      titulo: `Busca no Google — ${cleanTerms}`,
+      url: `https://www.google.com/search?q=${encodedTerm}`,
       tipo: "busca",
-      observacao: "Comparar ficha técnica e distribuidores no Google",
+      observacao: "Comparar ficha técnica, distribuidores e informações na web",
     },
   ];
 
-  if (id.dominioOficial) {
-    const cleanDomain = id.dominioOficial
-      .replace(/^https?:\/\//, "")
-      .replace(/\/$/, "");
+  // Se houver marca identificada, adiciona busca garantida pelo site oficial/fabricante
+  if (brand) {
+    const brandQuery = encodeURIComponent(`${brand} site oficial brasil`);
     refs.unshift({
-      titulo: `Site Oficial do Fabricante (${cleanDomain})`,
-      url: `https://${cleanDomain}`,
+      titulo: `Site Oficial da Marca (${brand})`,
+      url: `https://www.google.com/search?q=${brandQuery}`,
       tipo: "oficial",
       verificado: true,
-      observacao: "Fonte oficial da marca para extrair especificações exatas",
+      observacao: `Buscar site oficial e catálogo do fabricante ${brand}`,
     });
   }
 
