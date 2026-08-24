@@ -24,11 +24,59 @@ export interface ProductInput {
   other?: string;
 }
 
+/** PASSO 1 — identificação exata do produto a partir da foto. */
+export interface Identificacao {
+  produto: string;
+  marca: string;
+  linha: string;
+  variacao: string;
+  volume: string;
+  /** Texto lido literalmente na embalagem. */
+  leituraEmbalagem: string[];
+  certeza: "alta" | "media" | "baixa";
+  duvidas: string[];
+  /** Cor dominante do rótulo/tampa em hexadecimal, ex: "#E4002B". */
+  corAcento: string;
+  /** largura ÷ altura do produto recortado. */
+  proporcao: number;
+  layout: "A" | "B" | "C";
+  termosBusca: string[];
+  dominioOficial?: string;
+}
+
+export type ReferenceKind = "oficial" | "marketplace" | "busca";
+
+export interface Referencia {
+  titulo: string;
+  url: string;
+  tipo: ReferenceKind;
+  /** true quando o link foi verificado e respondeu. */
+  verificado?: boolean;
+  observacao?: string;
+}
+
+export interface PontoImagem {
+  texto: string;
+  icone: string;
+  fonte: string;
+}
+
+/** PASSO 3 — plano da arte antes de gerar a imagem. */
+export interface ImagePlan {
+  proporcao: number;
+  layout: "A" | "B" | "C";
+  corAcento: string;
+  titulo: { linha1: string; linha2: string; linha3: string };
+  pontos: PontoImagem[];
+  naoConfirmado: string[];
+}
+
 export interface ImageBrief {
   tipo: "principal" | "objecoes" | "detalhes" | "contexto";
   titulo: string;
   prompt: string;
   observacoes: string;
+  plano?: ImagePlan;
 }
 
 export interface Listing {
@@ -46,6 +94,8 @@ export interface Listing {
   alertas: string[];
   resumo: string;
   imagens: ImageBrief[];
+  identificacao?: Identificacao;
+  referencias?: Referencia[];
 }
 
 export type ListingSection =
