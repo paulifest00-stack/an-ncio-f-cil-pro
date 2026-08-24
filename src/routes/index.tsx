@@ -51,11 +51,11 @@ function Index() {
 
   return (
     <main className="min-h-screen bg-background px-4 py-10">
-      <header className="mx-auto mb-8 flex w-full max-w-4xl items-center justify-between">
+      <header className="mx-auto mb-8 flex w-full max-w-4xl items-center justify-between gap-4">
         <span className="text-sm font-semibold tracking-tight">
           Anúncio<span className="text-primary"> Fácil</span>
         </span>
-        <span className="text-xs text-muted-foreground">Precisão &gt; completude &gt; criatividade</span>
+        <AiCreditsBadge />
       </header>
 
       {stage === "form" ? <NewProductForm onSubmit={run} /> : null}
