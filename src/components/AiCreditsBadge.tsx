@@ -97,43 +97,60 @@ export function AiCreditsBadge() {
     <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
       <PopoverTrigger asChild>
         <button
-          className="group flex flex-col items-start gap-1.5 rounded-xl border border-border bg-card/90 px-3.5 py-2 text-left shadow-xs transition-all hover:border-primary/40 hover:bg-accent/40 focus:outline-hidden"
+          className="group rounded-xl border border-border/80 bg-card/90 shadow-xs transition-all hover:border-primary/40 hover:bg-accent/40 focus:outline-hidden"
           title="Clique para ver detalhes do consumo de IA"
         >
-          {/* Linha 1: Status + Porcentagem */}
-          <div className="flex w-full items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-1.5 font-medium">
-              <span
-                className={`size-2 rounded-full shadow-xs transition-colors ${
-                  state ? DOT[state.status] : "bg-muted-foreground"
-                }`}
-              />
-              <span className="text-foreground">
-                {state ? STATUS_TEXT[state.status] : "Verificando..."}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <span className={`font-mono text-xs font-bold ${getTextColorClass()}`}>
-                {usage.porcentagemUsada}%
-              </span>
-              <span className="text-[10px] text-muted-foreground">usado</span>
-              <ChevronDown className="size-3 text-muted-foreground transition-transform group-hover:translate-y-0.5" />
-            </div>
-          </div>
-
-          {/* Linha 2: Barra de Progresso Visual */}
-          <div className="relative h-1.5 w-full min-w-[140px] overflow-hidden rounded-full bg-muted">
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${getProgressColorClass()}`}
-              style={{ width: `${Math.max(4, usage.porcentagemUsada)}%` }}
+          {/* Mobile View (< sm): Pílula compacta */}
+          <div className="flex sm:hidden items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold">
+            <span
+              className={`size-2 rounded-full shadow-xs shrink-0 transition-colors ${
+                state ? DOT[state.status] : "bg-muted-foreground"
+              }`}
             />
+            <span className={`font-mono text-xs font-bold ${getTextColorClass()}`}>
+              {usage.porcentagemUsada}%
+            </span>
+            <span className="text-[10px] text-muted-foreground font-normal">IA</span>
+            <ChevronDown className="size-3 text-muted-foreground opacity-60" />
           </div>
 
-          {/* Linha 3: Resumo rápido */}
-          <div className="flex w-full items-center justify-between text-[10px] text-muted-foreground">
-            <span>Hoje: {usage.hojeTexto} ads · {usage.hojeImagem} img</span>
-            <span>Restam ~{usage.restante}</span>
+          {/* Desktop View (>= sm): Card com barra de progresso */}
+          <div className="hidden sm:flex flex-col items-start gap-1.5 px-3.5 py-2 text-left">
+            {/* Linha 1: Status + Porcentagem */}
+            <div className="flex w-full items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-1.5 font-medium">
+                <span
+                  className={`size-2 rounded-full shadow-xs transition-colors ${
+                    state ? DOT[state.status] : "bg-muted-foreground"
+                  }`}
+                />
+                <span className="text-foreground">
+                  {state ? STATUS_TEXT[state.status] : "Verificando..."}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1">
+                <span className={`font-mono text-xs font-bold ${getTextColorClass()}`}>
+                  {usage.porcentagemUsada}%
+                </span>
+                <span className="text-[10px] text-muted-foreground">usado</span>
+                <ChevronDown className="size-3 text-muted-foreground transition-transform group-hover:translate-y-0.5" />
+              </div>
+            </div>
+
+            {/* Linha 2: Barra de Progresso Visual */}
+            <div className="relative h-1.5 w-full min-w-[140px] overflow-hidden rounded-full bg-muted">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${getProgressColorClass()}`}
+                style={{ width: `${Math.max(4, usage.porcentagemUsada)}%` }}
+              />
+            </div>
+
+            {/* Linha 3: Resumo rápido */}
+            <div className="flex w-full items-center justify-between text-[10px] text-muted-foreground">
+              <span>Hoje: {usage.hojeTexto} ads · {usage.hojeImagem} img</span>
+              <span>Restam ~{usage.restante}</span>
+            </div>
           </div>
         </button>
       </PopoverTrigger>

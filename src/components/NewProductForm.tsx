@@ -181,15 +181,15 @@ export function NewProductForm({
       className="mx-auto w-full max-w-2xl"
     >
       {/* Container Principal Estilo iOS Grouped Card */}
-      <div className="overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-6 shadow-xl backdrop-blur-2xl sm:p-8">
+      <div className="overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-4 shadow-xl backdrop-blur-2xl sm:p-8">
         {/* Cabeçalho */}
-        <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-5">
+        <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-4 sm:pb-5">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold text-primary">
               <Sparkles className="size-3.5" />
               <span>Gerador Inteligente & Auto-OCR</span>
             </div>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            <h1 className="mt-1.5 text-xl font-bold tracking-tight text-foreground sm:text-3xl">
               Criar Novo Anúncio
             </h1>
             <p className="mt-1 text-xs text-muted-foreground sm:text-sm">

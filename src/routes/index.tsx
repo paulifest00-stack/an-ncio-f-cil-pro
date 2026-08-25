@@ -65,30 +65,30 @@ function Index() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background via-background/95 to-muted/20 px-4 pb-16 pt-6 sm:px-6">
+    <main className="min-h-screen bg-gradient-to-b from-background via-background/95 to-muted/20 px-3 pb-16 pt-3 sm:px-6 sm:pt-6">
       {/* Barra de Topo iOS 18 Frosted Glass */}
-      <header className="sticky top-4 z-40 mx-auto mb-8 flex w-full max-w-4xl items-center justify-between gap-3 rounded-2xl border border-border/70 bg-card/80 px-4 py-2.5 shadow-lg backdrop-blur-2xl transition-all sm:px-5">
+      <header className="sticky top-2 sm:top-4 z-40 mx-auto mb-5 sm:mb-8 flex w-full max-w-4xl items-center justify-between gap-2 rounded-2xl border border-border/70 bg-card/85 px-3 py-2 shadow-lg backdrop-blur-2xl transition-all sm:px-5 sm:py-2.5">
         {/* Marca / Logo */}
         <button
           type="button"
           onClick={() => setStage("form")}
-          className="flex items-center gap-2.5 text-left transition-transform active:scale-95"
+          className="flex items-center gap-2 text-left transition-transform active:scale-95 shrink-0"
         >
-          <div className="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
-            <Sparkles className="size-4.5" />
+          <div className="flex size-8 sm:size-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
+            <Sparkles className="size-4 sm:size-4.5" />
           </div>
           <div>
-            <span className="text-sm font-bold tracking-tight text-foreground">
+            <span className="text-xs sm:text-sm font-bold tracking-tight text-foreground">
               Anúncio<span className="text-primary font-black"> Fácil</span>
             </span>
-            <span className="ml-1 rounded-md bg-primary/10 px-1.5 py-0.2 text-[10px] font-bold text-primary">
+            <span className="ml-1 rounded-md bg-primary/10 px-1.5 py-0.2 text-[9px] sm:text-[10px] font-bold text-primary">
               PRO
             </span>
           </div>
         </button>
 
         {/* Ações da Direita: Meus Anúncios (Supabase) + Badge de Créditos */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <RecentListings onSelect={handleSelectSaved} />
           <AiCreditsBadge />
         </div>

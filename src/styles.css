@@ -150,3 +150,41 @@
     transform: none !important;
   }
 }
+
+/* Ocultar Badge Flutuante do Lovable (Edit with Lovable) */
+#lovable-badge,
+[data-lovable-badge],
+.lovable-badge,
+a[href*="lovable.dev/projects"],
+a[href*="lovable.dev"],
+div[class*="lovable-badge"],
+button[aria-label*="Lovable"],
+[data-component-name="LovableBadge"],
+#lovable-editor-badge {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  pointer-events: none !important;
+  position: absolute !important;
+  z-index: -9999 !important;
+  width: 0 !important;
+  height: 0 !important;
+  clip: rect(0, 0, 0, 0) !important;
+}
+
+/* Utilitários Mobile-First */
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px !important; /* Previne auto-zoom no iOS Safari */
+  }
+  
+  /* Scroll suave horizontal em controles segmentados */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+

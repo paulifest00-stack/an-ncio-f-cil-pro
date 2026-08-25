@@ -76,15 +76,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" },
+      { title: "Anúncio Fácil Pro — Criação Inteligente de Anúncios no Mercado Livre & Bling" },
+      { name: "description", content: "Crie anúncios de alta conversão para Mercado Livre e Bling com fotos 1:1 de fundo branco, quebra de objeções, SKUs padronizados e classificação fiscal NCM/EAN-13." },
+      { name: "author", content: "Anúncio Fácil Pro" },
+      { property: "og:title", content: "Anúncio Fácil Pro — Gerador Inteligente de Anúncios" },
+      { property: "og:description", content: "Fotos 1:1 com fundo branco, arte de quebra de objeções, SKUs padronizados e EAN-13 para marketplace." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
@@ -102,11 +101,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR" className="h-full antialiased">
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="min-h-full bg-background text-foreground antialiased selection:bg-primary/20">
         {children}
         <Scripts />
       </body>
@@ -116,6 +115,53 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Remove e oculta permanentemente o badge "Edit with Lovable" do DOM
+  useEffect(() => {
+    const removeLovableBadge = () => {
+      const selectors = [
+        "#lovable-badge",
+        "[data-lovable-badge]",
+        ".lovable-badge",
+        "a[href*='lovable.dev']",
+        "div[id*='lovable']",
+        "#lovable-editor-badge",
+        "[data-component-name='LovableBadge']",
+      ];
+      selectors.forEach((sel) => {
+        document.querySelectorAll(sel).forEach((el) => {
+          (el as HTMLElement).style.setProperty("display", "none", "important");
+          (el as HTMLElement).style.setProperty("opacity", "0", "important");
+          (el as HTMLElement).style.setProperty("visibility", "hidden", "important");
+          (el as HTMLElement).style.setProperty("pointer-events", "none", "important");
+          el.remove();
+        });
+      });
+
+      // Varre links ou botões que contenham "Edit with Lovable" ou "Lovable"
+      document.querySelectorAll("a, button, div").forEach((node) => {
+        const text = node.textContent || "";
+        if (
+          text.includes("Edit with Lovable") ||
+          text.includes("Made with Lovable") ||
+          text.includes("lovable.dev")
+        ) {
+          if (!node.closest("#settings-dialog") && !node.closest(".settings-content")) {
+            (node as HTMLElement).style.setProperty("display", "none", "important");
+            node.remove();
+          }
+        }
+      });
+    };
+
+    removeLovableBadge();
+    const observer = new MutationObserver(() => {
+      removeLovableBadge();
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -312,19 +312,19 @@ export function ProductDashboard({
       className="mx-auto w-full max-w-4xl space-y-6"
     >
       {/* 1. Header do Produto Estilo iOS Frosted Card */}
-      <div className="overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-5 shadow-xl backdrop-blur-2xl sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
+      <div className="overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-4 shadow-xl backdrop-blur-2xl sm:p-6">
+        <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start sm:items-center gap-3 sm:gap-4">
             {/* Foto do Produto com Badge de Cor de Acento */}
             <div className="relative shrink-0">
               <img
                 src={input.photoDataUrl}
                 alt={listing.nomeInterno}
-                className="size-18 rounded-2xl border border-border/80 object-cover shadow-md"
+                className="size-16 sm:size-18 rounded-2xl border border-border/80 object-cover shadow-md"
               />
               {id?.corAcento ? (
                 <span
-                  className="absolute -bottom-1.5 -right-1.5 size-5 rounded-full border-2 border-card shadow-sm"
+                  className="absolute -bottom-1 -right-1 size-4 sm:size-5 rounded-full border-2 border-card shadow-sm"
                   style={{ backgroundColor: id.corAcento }}
                   title={`Cor de acento da embalagem: ${id.corAcento}`}
                 />
@@ -333,78 +333,81 @@ export function ProductDashboard({
 
             {/* Metadados e Título */}
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="truncate text-lg font-bold tracking-tight text-foreground sm:text-xl">
+              <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                <h1 className="truncate text-base font-bold tracking-tight text-foreground sm:text-xl">
                   {listing.nomeInterno || input.basicName}
                 </h1>
                 {isKitActive ? (
-                  <Badge className="bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider">
+                  <Badge className="bg-primary text-primary-foreground text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
                     Kit {effectiveKitQty}x
                   </Badge>
                 ) : null}
                 {id?.layout ? (
-                  <Badge variant="outline" className="rounded-lg px-2 py-0 text-[10px] font-bold uppercase tracking-wider">
+                  <Badge variant="outline" className="rounded-lg px-2 py-0 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">
                     Layout {id.layout} (1:1)
                   </Badge>
                 ) : null}
               </div>
 
-              <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-mono text-[11px] font-semibold text-foreground">
+              <div className="mt-1 flex flex-wrap items-center gap-2 sm:gap-3 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] sm:text-[11px] font-semibold text-foreground">
                   <Tag className="size-3 text-primary" />
                   {listing.sku || "SEM SKU"}
                 </span>
                 {currentNcm ? (
-                  <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-2 py-0.5 font-mono text-[11px] font-semibold text-foreground">
+                  <span className="inline-flex items-center gap-1 rounded-md bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] sm:text-[11px] font-semibold text-foreground">
                     NCM: {currentNcm}
                   </span>
                 ) : null}
                 {id?.marca ? (
-                  <span>
+                  <span className="text-[11px] sm:text-xs">
                     Marca: <strong className="text-foreground">{id.marca}</strong>
                   </span>
                 ) : null}
                 {id?.volume ? (
-                  <span>
-                    Volume: <strong className="text-foreground">{id.volume}</strong>
+                  <span className="text-[11px] sm:text-xs">
+                    Vol: <strong className="text-foreground">{id.volume}</strong>
                   </span>
                 ) : null}
               </div>
             </div>
           </div>
 
-          {/* Botões de Ação Topo */}
-          <div className="flex items-center gap-2 self-end sm:self-center">
+          {/* Botões de Ação Topo - Grid no mobile, Flex no desktop */}
+          <div className="grid grid-cols-3 sm:flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto mt-1 sm:mt-0">
             {/* Botão de Montar / Mudar Kit */}
-            <motion.div whileTap={{ scale: 0.95 }}>
+            <motion.div whileTap={{ scale: 0.95 }} className="w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowKitModal(!showKitModal)}
                 disabled={isConvertingKit}
-                className="h-8 gap-1.5 rounded-xl border-primary/40 bg-primary/5 text-xs font-semibold text-primary hover:bg-primary/10"
+                className="w-full sm:w-auto h-8 gap-1 rounded-xl border-primary/40 bg-primary/5 text-xs font-semibold text-primary hover:bg-primary/10"
               >
                 {isConvertingKit ? (
                   <Loader2 className="size-3.5 animate-spin" />
                 ) : (
                   <Layers className="size-3.5" />
                 )}
-                <span>{isKitActive ? `Kit (${effectiveKitQty}x)` : "Montar Kit"}</span>
+                <span className="truncate">{isKitActive ? `Kit (${effectiveKitQty}x)` : "Montar Kit"}</span>
               </Button>
             </motion.div>
 
-            <CopyButton
-              text={anuncioCompleto}
-              label="Copiar Tudo"
-              variant="default"
-              className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20"
-            />
-            <motion.div whileTap={{ scale: 0.95 }}>
+            <div className="w-full sm:w-auto">
+              <CopyButton
+                text={anuncioCompleto}
+                label="Copiar"
+                variant="default"
+                className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20"
+              />
+            </div>
+
+            <motion.div whileTap={{ scale: 0.95 }} className="w-full sm:w-auto">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={onBack}
-                className="h-8 gap-1.5 rounded-xl text-xs font-medium"
+                className="w-full sm:w-auto h-8 gap-1 rounded-xl text-xs font-medium"
               >
                 <ArrowLeft className="size-3.5" />
                 <span>Novo</span>
