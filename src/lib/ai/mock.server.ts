@@ -195,28 +195,28 @@ export function generateMockListing(input: ProductInput): Listing {
       titulo: "1. Foto Principal de Catálogo",
       prompt: `Commercial product photography of ${safePromptName}, centered, pure white background #FFFFFF, professional studio lighting, soft subtle drop shadow, crystal clear sharpness, pristine packaging, 8k resolution catalog style`,
       observacoes: "Fundo branco 100%, iluminação neutra de estúdio, produto centralizado e inteiro.",
-      imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Commercial product photograph of ${safePromptName} on pure white background, studio lighting, crisp packaging, catalog photography`)}?width=800&height=800&nologo=true`,
+      url: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Commercial product photograph of ${safePromptName} on pure white background, studio lighting, crisp packaging, catalog photography`)}?width=800&height=800&nologo=true`,
     },
     {
       tipo: "objecoes",
       titulo: "2. Quebra de Objeções (Infográfico Limpo)",
       prompt: `Minimalist commercial product shot of ${safePromptName} on clean white background, accompanied by subtle elegant feature badges showing confirmed specs: original quality, pristine packaging, studio commercial photo`,
       observacoes: "Fundo branco com até 3 informações essenciais confirmadas.",
-      imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Minimalist product photo of ${safePromptName} on white background with clean sleek feature highlights, high end commercial style`)}?width=800&height=800&nologo=true`,
+      url: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Minimalist product photo of ${safePromptName} on white background with clean sleek feature highlights, high end commercial style`)}?width=800&height=800&nologo=true`,
     },
     {
       tipo: "detalhes",
       titulo: "3. Foto de Detalhes e Textura",
       prompt: `Macro close-up studio shot of ${safePromptName}, focusing on fine packaging details, texture and quality seal, soft diffused studio light, pure white background, hyperrealistic macro photography`,
       observacoes: "Foco nos detalhes reais da embalagem, textura e lacre de segurança.",
-      imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Macro detailed close-up shot of ${safePromptName} packaging, studio lighting, white backdrop, hyperdetailed`)}?width=800&height=800&nologo=true`,
+      url: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Macro detailed close-up shot of ${safePromptName} packaging, studio lighting, white backdrop, hyperdetailed`)}?width=800&height=800&nologo=true`,
     },
     {
       tipo: "contexto",
       titulo: "4. Foto em Uso / Contexto Realista",
       prompt: `Realistic lifestyle commercial photography of ${safePromptName} placed in an authentic, beautifully styled natural setting, warm ambient lighting, editorial aesthetic, true-to-life scene`,
       observacoes: "Cenário realista e elegante mostrando o produto no seu ambiente de uso natural.",
-      imageUrl: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Lifestyle product photography of ${safePromptName} in a realistic elegant setting, authentic commercial photo`)}?width=800&height=800&nologo=true`,
+      url: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Lifestyle product photography of ${safePromptName} in a realistic elegant setting, authentic commercial photo`)}?width=800&height=800&nologo=true`,
     },
   ];
 
