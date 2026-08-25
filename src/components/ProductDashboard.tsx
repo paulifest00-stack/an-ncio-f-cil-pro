@@ -324,20 +324,20 @@ export function ProductDashboard({
       transition={{ type: "spring", duration: 0.4, bounce: 0 }}
       className="mx-auto w-full max-w-4xl space-y-6"
     >
-      {/* 1. Header do Produto Estilo E-commerce */}
-      <div className="rounded-lg border border-border bg-card p-4 shadow-sm sm:p-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* 1. Header do Produto Estilo iOS Frosted Card */}
+      <div className="overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-4 shadow-xl backdrop-blur-2xl sm:p-6">
+        <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start sm:items-center gap-3 sm:gap-4">
             {/* Foto do Produto com Badge de Cor de Acento */}
             <div className="relative shrink-0">
               <img
                 src={input.photoDataUrl}
                 alt={listing.nomeInterno}
-                className="size-16 sm:size-20 rounded border border-border bg-white object-contain shadow-sm"
+                className="size-16 sm:size-18 rounded-2xl border border-border/80 object-cover shadow-md"
               />
               {id?.corAcento ? (
                 <span
-                  className="absolute -bottom-1 -right-1 size-5 rounded-full border-2 border-card shadow-sm"
+                  className="absolute -bottom-1 -right-1 size-4 sm:size-5 rounded-full border-2 border-card shadow-sm"
                   style={{ backgroundColor: id.corAcento }}
                   title={`Cor de acento da embalagem: ${id.corAcento}`}
                 />
@@ -395,7 +395,7 @@ export function ProductDashboard({
                 size="sm"
                 onClick={() => setShowKitModal(!showKitModal)}
                 disabled={isConvertingKit}
-                className="w-full sm:w-auto h-9 gap-1.5 rounded text-xs font-semibold text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100 hover:text-blue-700"
+                className="w-full sm:w-auto h-8 gap-1 rounded-xl border-primary/40 bg-primary/5 text-xs font-semibold text-primary hover:bg-primary/10"
               >
                 {isConvertingKit ? (
                   <Loader2 className="size-3.5 animate-spin" />
@@ -409,9 +409,9 @@ export function ProductDashboard({
             <div className="w-full sm:w-auto">
               <CopyButton
                 text={anuncioCompleto}
-                label="Copiar Anúncio"
+                label="Copiar"
                 variant="default"
-                className="w-full sm:w-auto bg-blue-600 text-white hover:bg-blue-700 rounded h-9"
+                className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20"
               />
             </div>
 
@@ -420,10 +420,10 @@ export function ProductDashboard({
                 variant="outline"
                 size="sm"
                 onClick={onBack}
-                className="w-full sm:w-auto h-9 gap-1.5 rounded text-xs font-medium"
+                className="w-full sm:w-auto h-8 gap-1 rounded-xl text-xs font-medium"
               >
                 <ArrowLeft className="size-3.5" />
-                <span>Voltar</span>
+                <span>Novo</span>
               </Button>
             </motion.div>
           </div>
@@ -565,9 +565,9 @@ export function ProductDashboard({
         )}
       </AnimatePresence>
 
-      {/* 2. Navegação Aba Estilo E-commerce */}
-      <div className="no-scrollbar flex w-full overflow-x-auto border-b border-border bg-background">
-        <div className="flex w-full min-w-max">
+      {/* 2. Navegação Segmented Control iOS 18 com Pílula Deslizante */}
+      <div className="no-scrollbar flex w-full overflow-x-auto rounded-2xl border border-border/80 bg-muted/50 p-1.5 backdrop-blur-xl">
+        <div className="flex w-full min-w-max gap-1">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -585,17 +585,24 @@ export function ProductDashboard({
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative flex items-center justify-center gap-2 px-5 py-3.5 text-sm font-semibold transition-colors focus:outline-hidden ${
+                className={`relative flex flex-1 items-center justify-center gap-2 rounded-xl px-3.5 py-2 text-xs font-semibold transition-colors focus:outline-hidden ${
                   isActive
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-muted-foreground hover:text-foreground hover:border-b-2 hover:border-muted-foreground"
+                    ? "text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeTabPill"
+                    className="absolute inset-0 rounded-xl bg-card shadow-sm border border-border/60"
+                    transition={{ type: "spring", duration: 0.35, bounce: 0.15 }}
+                  />
+                )}
                 <span className="relative z-10 flex items-center gap-1.5">
-                  <Icon className={`size-4 ${isActive ? "text-blue-600" : ""}`} />
+                  <Icon className={`size-3.5 ${isActive ? "text-primary" : ""}`} />
                   <span>{tab.label}</span>
                   {badgeCount ? (
-                    <span className="ml-1 rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">
+                    <span className="rounded-full bg-primary/15 px-1.5 py-0.2 text-[10px] font-bold text-primary">
                       {badgeCount}
                     </span>
                   ) : null}
@@ -633,14 +640,14 @@ export function ProductDashboard({
             ) : null}
 
             {/* Card de Destaque Mercado Livre */}
-            <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+            <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     Título Oficial Mercado Livre
                   </span>
                   {isKitActive && (
-                    <Badge className="bg-blue-100 text-blue-700 text-[10px] font-bold">
+                    <Badge className="bg-primary/15 text-primary text-[10px] font-bold">
                       Kit {effectiveKitQty}x
                     </Badge>
                   )}
@@ -656,14 +663,14 @@ export function ProductDashboard({
                   <CopyButton text={listing.tituloMercadoLivre} />
                 </div>
               </div>
-              <p className="mt-3 text-base font-bold text-foreground sm:text-lg">
+              <p className="mt-2 text-base font-bold text-foreground sm:text-lg">
                 {listing.tituloMercadoLivre}
               </p>
             </div>
 
             {/* Card Rápido de NCM & EAN */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     NCM (Classificação Fiscal)
@@ -673,12 +680,12 @@ export function ProductDashboard({
                 <p className="mt-1.5 font-mono text-base font-bold text-foreground">
                   {currentNcm || "Não identificado"}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Nomenclatura Comum do Mercosul
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Nomenclatura Comum do Mercosul para notas fiscais
                 </p>
               </div>
 
-              <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     Código de Barras EAN-13
@@ -689,29 +696,29 @@ export function ProductDashboard({
                     <button
                       type="button"
                       onClick={handleGenerateMainEan}
-                      className="flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline"
+                      className="flex items-center gap-1 text-[11px] font-bold text-primary hover:underline"
                     >
                       <Zap className="size-3" />
                       Gerar EAN
                     </button>
                   )}
                 </div>
-                <p className="mt-1.5 font-mono text-base font-bold text-blue-700">
+                <p className="mt-1.5 font-mono text-base font-bold text-primary">
                   {currentEan || "Sem código gerado"}
                 </p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Código de barras oficial
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Código de barras oficial para marketplace e ERP
                 </p>
               </div>
             </div>
 
             {/* Diagnóstico da IA */}
             {listing.resumo ? (
-              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
-                <h3 className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
+                <h3 className="mb-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Diagnóstico e Leitura da Embalagem
                 </h3>
-                <p className="text-sm leading-relaxed text-foreground">
+                <p className="text-xs leading-relaxed text-foreground sm:text-sm">
                   {listing.resumo}
                 </p>
               </div>
@@ -719,8 +726,8 @@ export function ProductDashboard({
 
             {/* Características Rápidas */}
             {listing.caracteristicas.length ? (
-              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
-                <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
+                <h3 className="mb-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
                   Pontos-Chave Identificados
                 </h3>
                 <div className="flex flex-wrap gap-2">
@@ -728,7 +735,7 @@ export function ProductDashboard({
                     <Badge
                       key={c}
                       variant="secondary"
-                      className="rounded bg-muted/50 px-2.5 py-1 text-xs font-medium text-muted-foreground"
+                      className="rounded-lg px-2.5 py-1 text-xs font-medium"
                     >
                       {c}
                     </Badge>
@@ -738,19 +745,19 @@ export function ProductDashboard({
             ) : null}
 
             {/* Caixa Texto Puro Unificado */}
-            <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
                     Texto Completo do Anúncio
                   </h3>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[11px] text-muted-foreground">
                     Pronto para copiar e colar diretamente no painel do ERP ou Marketplace
                   </p>
                 </div>
                 <CopyButton text={anuncioCompleto} label="Copiar Tudo" />
               </div>
-              <pre className="max-h-72 overflow-auto rounded bg-muted/30 p-4 font-mono text-xs leading-relaxed text-foreground border border-border/50">
+              <pre className="max-h-72 overflow-auto rounded-xl bg-muted/40 p-4 font-mono text-xs leading-relaxed text-foreground shadow-inner">
                 {anuncioCompleto}
               </pre>
             </div>
@@ -768,20 +775,20 @@ export function ProductDashboard({
             className="space-y-4"
           >
             {/* Medidor do Título 60 Chars */}
-            <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+            <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">
-                    Título Formatado para Busca
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
+                    Título Formatado para Busca no Mercado Livre
                   </h3>
-                  <p className="text-xs text-muted-foreground">
-                    O algoritmo valoriza títulos com até 60 caracteres objetivos
+                  <p className="text-[11px] text-muted-foreground">
+                    Algoritmo do ML valoriza títulos com até 60 caracteres objetivos
                   </p>
                 </div>
                 <Badge
                   variant={isTitleOptimal ? "secondary" : "outline"}
                   className={`font-mono text-xs ${
-                    isTitleOptimal ? "text-emerald-600 bg-emerald-50 border-emerald-200" : "text-amber-600 bg-amber-50 border-amber-200"
+                    isTitleOptimal ? "text-emerald-600" : "text-amber-600"
                   }`}
                 >
                   {titleLength}/60 chars {isTitleOptimal ? "✓ Perfeito" : "(Ajuste)"}
@@ -822,15 +829,15 @@ export function ProductDashboard({
             </div>
 
             {/* Prévia de Card de Busca no Mercado Livre */}
-            <div className="rounded-lg border border-amber-500/20 bg-amber-50 p-5">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700">
+            <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
                 Prévia de Exibição nos Resultados de Busca
               </span>
-              <div className="mt-3 flex items-start gap-4 rounded-lg border border-border bg-card p-4 shadow-sm">
+              <div className="mt-3 flex items-start gap-4 rounded-xl border border-border bg-card p-3.5 shadow-sm">
                 <img
                   src={input.photoDataUrl}
                   alt="Foto do produto"
-                  className="size-24 rounded object-contain bg-white shrink-0 border"
+                  className="size-24 rounded-lg object-contain bg-white shrink-0 border"
                 />
                 <div className="min-w-0 flex-1">
                   <h4 className="line-clamp-2 text-sm font-semibold text-foreground hover:underline cursor-pointer">
@@ -863,16 +870,16 @@ export function ProductDashboard({
             transition={{ type: "spring", duration: 0.3, bounce: 0 }}
             className="space-y-4"
           >
-            <div className="rounded-lg border border-border bg-blue-50/50 p-4 text-xs">
+            <div className="rounded-2xl border border-border/80 bg-muted/30 p-4 text-xs">
               <span className="font-bold text-foreground">Estrutura Padronizada de SKU:</span>
-              <p className="mt-1 font-mono text-[11px] text-blue-700">
+              <p className="mt-1 font-mono text-[11px] text-primary">
                 [MARCA][CATEGORIA/PRODUTO][ESPECIFICACAO_FIXA][QTD_BASE] - [VARIACAO]
               </p>
             </div>
 
             {/* Grid SKU Pai & Filho */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     SKU Pai (Base da Família)
@@ -890,7 +897,7 @@ export function ProductDashboard({
                 </p>
               </div>
 
-              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                     SKU Filho (Variação Ativa)
@@ -910,8 +917,8 @@ export function ProductDashboard({
             </div>
 
             {/* CARD FISCAL: NCM & GERADOR DE EAN-13 */}
-            <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border pb-3">
+            <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                     <Barcode className="size-4" />
@@ -930,7 +937,7 @@ export function ProductDashboard({
                     size="sm"
                     variant="outline"
                     onClick={handleGenerateAllVariationEans}
-                    className="h-8 gap-1.5 rounded text-xs font-semibold text-blue-600 hover:bg-blue-50 border-blue-200"
+                    className="h-8 gap-1.5 rounded-xl text-xs font-semibold text-primary hover:bg-primary/10"
                   >
                     <Zap className="size-3.5" />
                     Gerar EANs para Todas as Variações
@@ -940,7 +947,7 @@ export function ProductDashboard({
 
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* NCM Card */}
-                <div className="rounded-lg border border-border bg-muted/10 p-4">
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-foreground">
                       NCM (Nomenclatura Comum do Mercosul)
@@ -979,7 +986,7 @@ export function ProductDashboard({
                 </div>
 
                 {/* EAN-13 Card */}
-                <div className="rounded-lg border border-border bg-muted/10 p-4">
+                <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs font-bold text-foreground">
@@ -1024,7 +1031,7 @@ export function ProductDashboard({
 
             {/* Variações Mapeadas com EAN Individual */}
             {listing.variacoesSku && listing.variacoesSku.length > 0 ? (
-              <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+              <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
                 <h3 className="mb-3 text-xs font-bold uppercase tracking-wider text-foreground">
                   Variações, SKUs & Códigos EAN-13
                 </h3>
@@ -1032,7 +1039,7 @@ export function ProductDashboard({
                   {listing.variacoesSku.map((v, i) => (
                     <div
                       key={i}
-                      className="rounded-lg border border-border bg-muted/10 p-3"
+                      className="rounded-xl border border-border/70 bg-muted/30 p-3"
                     >
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold text-foreground">
@@ -1059,7 +1066,7 @@ export function ProductDashboard({
                               size="sm"
                               variant="outline"
                               onClick={() => handleGenerateVariationEan(i)}
-                              className="h-7 gap-1 rounded text-[11px] font-bold text-blue-600 hover:bg-blue-50 border-blue-200"
+                              className="h-7 gap-1 rounded-lg text-[11px] font-bold text-primary"
                             >
                               <Zap className="size-3" />
                               Gerar EAN
@@ -1106,20 +1113,20 @@ export function ProductDashboard({
             />
 
             {/* Ficha Técnica Tabular */}
-            <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
-              <div className="mb-4 flex items-center justify-between">
+            <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
+              <div className="mb-3 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
                     Ficha Técnica Detalhada (Inclui NCM e EAN)
                   </h3>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[11px] text-muted-foreground">
                     Dados com origem e rastreabilidade visual
                   </p>
                 </div>
                 <CopyButton text={fichaText(listing)} />
               </div>
 
-              <div className="divide-y divide-border overflow-hidden rounded-lg border border-border">
+              <div className="divide-y divide-border/60 overflow-hidden rounded-xl border border-border/60">
                 {Object.entries(listing.fichaTecnica).map(([k, v]) => (
                   <div
                     key={k}
@@ -1153,20 +1160,20 @@ export function ProductDashboard({
             className="space-y-6"
           >
             {/* Cabeçalho explicativo */}
-            <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+            <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <h3 className="text-sm font-bold text-foreground">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
                     Galeria de Imagens do Anúncio (Proporção 1:1 Quadrada)
                   </h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-0.5 text-xs text-muted-foreground">
                     {isKitActive
                       ? `Modo Kit Ativo (${effectiveKitQty} Unidades): as fotos do catálogo são geradas exibindo as unidades agrupadas.`
                       : "Gere fotos profissionais para o catálogo do Mercado Livre ou copie os prompts para usar em IAs externas."}
                   </p>
                 </div>
                 {id?.corAcento && (
-                  <div className="flex items-center gap-1.5 rounded border border-border bg-muted/20 px-3 py-1.5 text-xs">
+                  <div className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/40 px-3 py-1 text-xs">
                     <Palette className="size-3.5 text-primary" />
                     <span className="text-[11px] text-muted-foreground">Cor de Acento:</span>
                     <span
@@ -1189,21 +1196,21 @@ export function ProductDashboard({
                 return (
                   <div
                     key={idx}
-                    className="flex flex-col justify-between overflow-hidden rounded-lg border border-border bg-card p-5 shadow-sm transition-all hover:border-blue-400"
+                    className="flex flex-col justify-between overflow-hidden rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm transition-all hover:border-primary/40"
                   >
                     <div>
                       {/* Topo do Card de Imagem */}
-                      <div className="flex items-start justify-between gap-2 border-b border-border pb-3">
+                      <div className="flex items-start justify-between gap-2 border-b border-border/60 pb-3">
                         <div>
                           <div className="flex items-center gap-2">
                             <Badge
                               variant="outline"
-                              className="rounded px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-600 border-blue-200"
+                              className="rounded-lg px-2 py-0 text-[10px] font-bold uppercase tracking-wider text-primary"
                             >
                               Foto {idx + 1} • {brief.tipo.toUpperCase()}
                             </Badge>
                             {isKitActive && (
-                              <Badge className="bg-blue-100 text-blue-700 text-[10px] font-bold">
+                              <Badge className="bg-primary/10 text-primary text-[9px] font-bold">
                                 Kit {effectiveKitQty}x
                               </Badge>
                             )}
@@ -1255,7 +1262,7 @@ export function ProductDashboard({
                       {/* Exibição da Imagem Gerada (se existir) */}
                       {state.url ? (
                         <div className="mt-4 flex flex-col items-center gap-3">
-                          <div className="relative group w-full aspect-square overflow-hidden rounded-lg border border-border bg-muted/20">
+                          <div className="relative group w-full aspect-square overflow-hidden rounded-xl border border-border bg-muted/40 shadow-inner">
                             <img
                               src={state.url}
                               alt={brief.titulo}
@@ -1265,7 +1272,7 @@ export function ProductDashboard({
                               <a
                                 href={state.url}
                                 download={`imagem-${idx + 1}-${brief.tipo}.png`}
-                                className="rounded bg-white px-3 py-2 text-xs font-bold text-black shadow-sm hover:bg-neutral-100 transition-transform active:scale-95 flex items-center gap-1.5"
+                                className="rounded-xl bg-white px-3 py-2 text-xs font-bold text-black shadow-lg hover:bg-neutral-100 transition-transform active:scale-95 flex items-center gap-1.5"
                               >
                                 <Download className="size-3.5" />
                                 Baixar 1:1
@@ -1376,7 +1383,7 @@ export function ProductDashboard({
                             size="sm"
                             onClick={() => renderImage(idx, brief)}
                             disabled={state.loading}
-                            className="w-full gap-2 rounded bg-blue-600 text-xs font-bold text-white shadow hover:bg-blue-700 h-9"
+                            className="w-full gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white shadow-md shadow-blue-500/20 hover:from-blue-700 hover:to-indigo-700"
                           >
                             {state.loading ? (
                               <Loader2 className="size-3.5 animate-spin" />
@@ -1405,12 +1412,12 @@ export function ProductDashboard({
             transition={{ type: "spring", duration: 0.3, bounce: 0 }}
             className="space-y-4"
           >
-            <div className="rounded-lg border border-border bg-card p-5 shadow-sm">
+            <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
               <div className="mb-4">
-                <h3 className="text-sm font-bold text-foreground">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">
                   Pesquisas e Anúncios Reais na Internet
                 </h3>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground">
                   Clique em qualquer link abaixo para abrir o produto em marketplaces e extrair fotos, avaliações e ideias de concorrentes
                 </p>
               </div>
@@ -1422,9 +1429,9 @@ export function ProductDashboard({
                     href={ref.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="group flex items-start gap-3 rounded-lg border border-border bg-muted/10 p-4 transition-all hover:border-blue-400 hover:bg-blue-50/50 hover:shadow-sm active:scale-[0.98]"
+                    className="group flex items-start gap-3 rounded-2xl border border-border/80 bg-muted/20 p-4 transition-all hover:border-primary/50 hover:bg-card hover:shadow-md active:scale-[0.98]"
                   >
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded bg-blue-100 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary group-hover:bg-primary group-hover:text-white transition-colors">
                       {ref.tipo === "oficial" ? (
                         <Globe className="size-5" />
                       ) : (
