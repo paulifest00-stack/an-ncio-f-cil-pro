@@ -189,19 +189,19 @@ export function NewProductForm({
       transition={{ type: "spring", duration: 0.45, bounce: 0 }}
       className="mx-auto w-full max-w-2xl"
     >
-      {/* Container Principal Estilo iOS Grouped Card */}
-      <div className="overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-4 shadow-xl backdrop-blur-2xl sm:p-8">
+      {/* Container Principal Estilo E-commerce (ML/Bling) */}
+      <div className="overflow-hidden rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">
         {/* Cabeçalho */}
-        <div className="flex items-start justify-between gap-4 border-b border-border/60 pb-4 sm:pb-5">
+        <div className="flex items-start justify-between gap-4 border-b border-border pb-5">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold text-primary">
+            <div className="inline-flex items-center gap-2 rounded bg-primary/10 px-2.5 py-0.5 text-[11px] sm:text-xs font-semibold text-primary">
               <Sparkles className="size-3.5" />
               <span>Gerador Inteligente & Auto-OCR</span>
             </div>
-            <h1 className="mt-1.5 text-xl font-bold tracking-tight text-foreground sm:text-3xl">
+            <h1 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
               Criar Novo Anúncio
             </h1>
-            <p className="mt-1 text-xs text-muted-foreground sm:text-sm">
+            <p className="mt-1 text-sm text-muted-foreground">
               Envie a foto do produto. A IA lê o rótulo, preenche o formulário e gera o anúncio completo.
             </p>
           </div>
@@ -233,29 +233,29 @@ export function NewProductForm({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ type: "spring", duration: 0.35, bounce: 0 }}
-                  className="group relative overflow-hidden rounded-2xl border border-border/80 bg-muted/30 shadow-inner"
+                  className="group relative overflow-hidden rounded-lg border border-border bg-muted/20"
                 >
-                  <div className="flex items-center justify-center p-4">
+                  <div className="flex items-center justify-center p-6">
                     <img
                       src={photo}
                       alt="Pré-visualização do produto"
-                      className="max-h-64 w-auto rounded-xl object-contain shadow-md"
+                      className="max-h-64 w-auto rounded object-contain shadow-sm"
                     />
                   </div>
 
                   {/* Banner de Status de Escaneamento */}
                   {isScanning && (
-                    <div className="absolute inset-x-0 top-0 flex items-center justify-center gap-2 bg-blue-600/90 py-2 text-xs font-semibold text-white backdrop-blur-md">
-                      <Loader2 className="size-3.5 animate-spin" />
-                      <span>Identificando texto e marca na embalagem com IA...</span>
+                    <div className="absolute inset-x-0 top-0 flex items-center justify-center gap-2 bg-blue-600 py-2.5 text-xs font-semibold text-white shadow-md">
+                      <Loader2 className="size-4 animate-spin" />
+                      <span>Identificando embalagem...</span>
                     </div>
                   )}
 
-                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 via-black/40 to-transparent p-3 text-white">
+                  <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-black/60 p-3 text-white">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-medium">Foto Carregada</span>
                       {cachedIdentificacao && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300 backdrop-blur-xs">
+                        <span className="inline-flex items-center gap-1 rounded bg-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-100">
                           <CheckCircle2 className="size-3" />
                           Auto-identificado
                         </span>
@@ -264,7 +264,7 @@ export function NewProductForm({
                     <button
                       type="button"
                       onClick={clearPhoto}
-                      className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold backdrop-blur-md transition-transform hover:scale-105 active:scale-95"
+                      className="flex items-center gap-1.5 rounded bg-white/20 px-3 py-1 text-xs font-medium transition-colors hover:bg-white/30"
                     >
                       <X className="size-3.5" />
                       Trocar foto
@@ -283,13 +283,13 @@ export function NewProductForm({
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={handleDrop}
                   whileTap={{ scale: 0.98 }}
-                  className={`group flex w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed p-8 text-center transition-all ${
+                  className={`group flex w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-dashed p-10 text-center transition-all ${
                     isDragging
-                      ? "border-primary bg-primary/10 shadow-lg"
-                      : "border-border/80 bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-border bg-muted/10 hover:border-blue-400 hover:bg-blue-50/50"
                   }`}
                 >
-                  <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-xs transition-transform group-hover:scale-110">
+                  <div className="flex size-14 items-center justify-center rounded-full bg-blue-100 text-blue-600 transition-transform group-hover:scale-110">
                     <Camera className="size-7" />
                   </div>
                   <div>
@@ -333,20 +333,18 @@ export function NewProductForm({
               value={basicName}
               placeholder="Ex.: Paçoca rolha 1kg ou Balão látex 9 polegadas"
               onChange={(e) => setBasicName(e.target.value)}
-              className="h-12 rounded-xl bg-background/80 px-4 text-sm font-medium shadow-inner transition-colors focus:border-primary"
+              className="h-11 rounded-lg border-border bg-background px-3 text-sm transition-colors focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             />
 
             {/* Presets Rápidos */}
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-medium text-muted-foreground">
-                Exemplos rápidos:
-              </span>
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+              <span className="text-xs text-muted-foreground">Sugestões:</span>
               {PRESETS.map((p) => (
                 <button
                   key={p.label}
                   type="button"
                   onClick={() => applyPreset(p)}
-                  className="rounded-lg border border-border/70 bg-card px-2.5 py-1 text-[11px] font-medium text-muted-foreground transition-all hover:border-primary/40 hover:bg-primary/5 hover:text-foreground active:scale-95"
+                  className="rounded border border-border bg-muted/30 px-2 py-1 text-[11px] text-muted-foreground transition-colors hover:border-blue-400 hover:bg-blue-50 hover:text-blue-700"
                 >
                   {p.label}
                 </button>
@@ -355,18 +353,18 @@ export function NewProductForm({
           </div>
 
           {/* Formato de Venda (Discreto e Minimalista) */}
-          <div className="rounded-xl border border-border/60 bg-muted/20 px-3.5 py-2.5">
+          <div className="rounded-lg border border-border bg-muted/10 p-3.5">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                <Layers className="size-3.5 text-primary" />
-                <span>Formato:</span>
+              <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                <Layers className="size-4 text-blue-600" />
+                <span>Formato de Venda:</span>
                 {currentEffectiveKitQty > 1 ? (
-                  <span className="rounded-md bg-primary/10 px-1.5 py-0.2 text-[10px] font-bold text-primary">
+                  <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[11px] font-bold text-blue-700">
                     Kit {currentEffectiveKitQty}x
                   </span>
                 ) : (
-                  <span className="text-[11px] font-normal text-muted-foreground">
-                    1 Unidade (Padrão)
+                  <span className="text-xs font-normal text-muted-foreground">
+                    Avulso
                   </span>
                 )}
               </div>
@@ -389,10 +387,10 @@ export function NewProductForm({
                         setIsCustomKit(false);
                         setKitQuantity(k.qty);
                       }}
-                      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all active:scale-95 ${
+                      className={`rounded px-3 py-1.5 text-xs font-medium transition-colors ${
                         isSelected
-                          ? "bg-primary text-primary-foreground shadow-xs"
-                          : "bg-card text-muted-foreground border border-border/60 hover:text-foreground hover:border-primary/40"
+                          ? "bg-blue-600 text-white"
+                          : "bg-background text-muted-foreground border border-border hover:border-blue-400 hover:text-foreground"
                       }`}
                     >
                       {k.label}
@@ -406,10 +404,10 @@ export function NewProductForm({
                     setIsCustomKit(!isCustomKit);
                     if (!customKitVal) setCustomKitVal("8");
                   }}
-                  className={`rounded-lg px-2 py-1 text-xs font-medium transition-all active:scale-95 ${
+                  className={`rounded px-3 py-1.5 text-xs font-medium transition-colors ${
                     isCustomKit
-                      ? "bg-primary text-primary-foreground shadow-xs"
-                      : "bg-card text-muted-foreground border border-border/60 hover:text-foreground hover:border-primary/40"
+                      ? "bg-blue-600 text-white"
+                      : "bg-background text-muted-foreground border border-border hover:border-blue-400 hover:text-foreground"
                   }`}
                   title="Definir outra quantidade de kit"
                 >
@@ -427,15 +425,15 @@ export function NewProductForm({
                   exit={{ opacity: 0, height: 0 }}
                   className="mt-2 flex items-center justify-end gap-2 pt-1 border-t border-border/40"
                 >
-                  <span className="text-[11px] text-muted-foreground">Qtd exata no Kit:</span>
+                  <span className="text-[11px] text-muted-foreground">Qtd exata:</span>
                   <Input
                     type="number"
                     min={2}
                     max={1000}
                     value={customKitVal}
                     onChange={(e) => setCustomKitVal(e.target.value)}
-                    placeholder="Ex: 8, 24"
-                    className="h-7 w-20 rounded-md bg-background text-center font-mono text-xs font-semibold"
+                    placeholder="Ex: 8"
+                    className="h-8 w-20 rounded bg-background text-center font-mono text-xs"
                   />
                   <span className="text-[11px] text-muted-foreground">unidades</span>
                 </motion.div>
@@ -443,19 +441,19 @@ export function NewProductForm({
             </AnimatePresence>
           </div>
 
-          {/* Campo 4: Opcionais Sanfonados no estilo iOS */}
-          <div className="overflow-hidden rounded-2xl border border-border/70 bg-muted/20">
+          {/* Campo 4: Opcionais Estilo E-commerce */}
+          <div className="overflow-hidden rounded-lg border border-border bg-muted/10">
             <button
               type="button"
               onClick={() => setShowOptional(!showOptional)}
-              className="flex w-full items-center justify-between px-4 py-3.5 text-left text-xs font-semibold text-foreground transition-colors hover:bg-muted/40"
+              className="flex w-full items-center justify-between px-4 py-3 text-left text-sm font-semibold text-foreground transition-colors hover:bg-muted/20"
             >
               <div className="flex items-center gap-2">
-                <PackagePlus className="size-4 text-primary" />
-                <span>Informações Adicionais (Opcional / Auto-preenchidas)</span>
+                <PackagePlus className="size-4 text-blue-600" />
+                <span>Ficha Técnica Opcional</span>
                 {Object.values(optional).filter(Boolean).length > 0 && (
-                  <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-                    {Object.values(optional).filter(Boolean).length} preenchidos
+                  <Badge variant="secondary" className="px-1.5 py-0 text-[10px] bg-blue-100 text-blue-700">
+                    {Object.values(optional).filter(Boolean).length}
                   </Badge>
                 )}
               </div>
@@ -600,12 +598,11 @@ export function NewProductForm({
             </motion.div>
           )}
 
-          {/* Botão de Ação Principal iOS */}
           <motion.div whileTap={{ scale: 0.98 }}>
             <Button
               size="lg"
               disabled={isScanning}
-              className="h-13 w-full gap-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-sm font-bold text-white shadow-lg shadow-blue-500/25 transition-all hover:from-blue-700 hover:to-indigo-700 hover:shadow-xl hover:shadow-blue-500/35 disabled:opacity-60"
+              className="h-12 w-full gap-2 rounded-lg bg-blue-600 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700 disabled:opacity-60"
               onClick={submit}
             >
               {isScanning ? (
@@ -614,7 +611,7 @@ export function NewProductForm({
                 <Sparkles className="size-5" />
               )}
               <span>
-                {isScanning ? "Identificando Foto..." : "Gerar Anúncio Profissional"}
+                {isScanning ? "Lendo embalagem..." : "Gerar Anúncio Completo"}
               </span>
             </Button>
           </motion.div>
