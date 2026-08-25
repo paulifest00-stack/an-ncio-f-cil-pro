@@ -69,50 +69,80 @@ export function NewProductForm({
     setIsScanning(true);
     setScanSuccessMsg(null);
     try {
-      const res = await quickScanPhoto({
+      const res = (await quickScanPhoto({
         data: { photoDataUrl: compressedDataUrl },
-      });
+      })) as {
+        identificacao?: Identificacao;
+        sugestoes?: {
+          basicName?: string;
+          brand?: string;
+          category?: string;
+          weight?: string;
+          packaging?: string;
+          units?: string;
+          ean?: string;
+        };
+        error?: string;
+        status?: "ok" | "sem_creditos" | "error";
+        hasContent?: boolean;
+      };
 
-      if (res && res.sugestoes) {
-        const { basicName: autoName, brand, category, weight, packaging, ean } = res.sugestoes;
-        
-        // Preenche o nome básico se não foi preenchido manualmente
-        if (autoName && !basicName) {
+      if (res) {
+        if (res.status === "sem_creditos" || res.error?.includes("Créditos") || res.error?.includes("402")) {
+          setError("Seus créditos de IA no Lovable estão esgotados no momento. Você ainda pode preencher os campos e salvar normalmente!");
+          setScanSuccessMsg(null);
+          return;
+        }
+
+        const sugestoes = res.sugestoes;
+        const autoName = sugestoes?.basicName;
+        const brand = sugestoes?.brand;
+        const category = sugestoes?.category;
+        const weight = sugestoes?.weight;
+        const packaging = sugestoes?.packaging;
+        const ean = sugestoes?.ean;
+
+        // Preenche o nome básico se foi identificado
+        if (autoName) {
           setBasicName(autoName);
         }
 
         // Preenche campos opcionais identificados
-        setOptional((prev) => ({
-          ...prev,
-          ...(brand ? { brand } : {}),
-          ...(category ? { category } : {}),
-          ...(weight ? { weight } : {}),
-          ...(packaging ? { packaging } : {}),
-          ...(ean ? { ean } : {}),
-        }));
+        if (brand || category || weight || packaging || ean) {
+          setOptional((prev) => ({
+            ...prev,
+            ...(brand ? { brand } : {}),
+            ...(category ? { category } : {}),
+            ...(weight ? { weight } : {}),
+            ...(packaging ? { packaging } : {}),
+            ...(ean ? { ean } : {}),
+          }));
+          setShowOptional(true);
+        }
 
-        // Guarda a identificação para reutilizar na geração completa sem repetir a etapa
+        // Guarda a identificação para reutilizar na geração completa sem gastar créditos duplicados
         if (res.identificacao) {
           setCachedIdentificacao(res.identificacao);
-          const foundItems = [
-            res.identificacao.marca && `Marca: ${res.identificacao.marca}`,
-            res.identificacao.volume && `Vol: ${res.identificacao.volume}`,
-            res.identificacao.linha && `Linha: ${res.identificacao.linha}`,
-          ].filter(Boolean);
+        }
 
-          setScanSuccessMsg(
-            foundItems.length > 0
-              ? `Foto identificada: ${foundItems.join(" • ")}`
-              : "Foto lida e dados preenchidos automaticamente.",
-          );
+        const foundItems = [
+          autoName && `Produto: ${autoName}`,
+          brand && `Marca: ${brand}`,
+          weight && `Vol: ${weight}`,
+        ].filter(Boolean);
 
-          if (brand || weight || category || ean) {
-            setShowOptional(true);
-          }
+        if (foundItems.length > 0) {
+          setScanSuccessMsg(`Foto identificada: ${foundItems.slice(0, 2).join(" • ")}`);
+        } else {
+          setScanSuccessMsg(null);
         }
       }
     } catch (err) {
       console.warn("Falha no escaneamento automático da foto:", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("402") || msg.toLowerCase().includes("crédito")) {
+        setError("Seus créditos de IA no Lovable estão esgotados no momento.");
+      }
     } finally {
       setIsScanning(false);
     }

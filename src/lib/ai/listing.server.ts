@@ -305,6 +305,9 @@ export async function scanProductPhoto(
     units?: string;
     ean?: string;
   };
+  error?: string;
+  status?: "ok" | "sem_creditos" | "error";
+  hasContent?: boolean;
 }> {
   const idMessages: ChatMessage[] = [
     {
@@ -328,10 +331,21 @@ export async function scanProductPhoto(
   ];
 
   let idResult: Identificacao;
+  let scanError: string | undefined;
+  let scanStatus: "ok" | "sem_creditos" | "error" = "ok";
+
   try {
     idResult = await chatJson<Identificacao>(idMessages);
   } catch (err) {
     console.error("Erro no escaneamento rápido da foto:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    scanError = msg;
+    if (msg.includes("402") || msg.toLowerCase().includes("crédito") || msg.toLowerCase().includes("insuficiente")) {
+      scanStatus = "sem_creditos";
+    } else {
+      scanStatus = "error";
+    }
+
     idResult = {
       produto: "",
       marca: "",
@@ -350,6 +364,7 @@ export async function scanProductPhoto(
 
   // Monta sugestões limpas para pré-preenchimento sem duplicações
   const rawParts = [
+    idResult.marca,
     idResult.produto,
     idResult.linha && !idResult.produto.toLowerCase().includes(idResult.linha.toLowerCase()) ? idResult.linha : "",
     idResult.volume && !idResult.produto.toLowerCase().includes(idResult.volume.toLowerCase()) ? idResult.volume : "",
@@ -360,6 +375,8 @@ export async function scanProductPhoto(
   // Tenta extrair EAN de leituraEmbalagem se houver
   const eanMatch = idResult.leituraEmbalagem?.find((t) => /^\d{8,14}$/.test(t.replace(/\D/g, "")));
 
+  const hasContent = Boolean(basicName || idResult.produto || idResult.marca || idResult.volume);
+
   return {
     identificacao: idResult,
     sugestoes: {
@@ -369,6 +386,9 @@ export async function scanProductPhoto(
       packaging: idResult.linha || undefined,
       ean: eanMatch ? eanMatch.replace(/\D/g, "") : undefined,
     },
+    error: scanError,
+    status: scanStatus,
+    hasContent,
   };
 }
 

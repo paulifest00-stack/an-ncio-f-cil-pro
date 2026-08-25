@@ -54,7 +54,9 @@ export function parseJson<T>(raw: string): T {
   if (fence?.[1]) text = fence[1].trim();
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
-  if (start > 0 || end < text.length - 1) text = text.slice(start, end + 1);
+  if (start !== -1 && end !== -1 && end >= start) {
+    text = text.slice(start, end + 1);
+  }
   text = text.replace(/,\s*([}\]])/g, "$1");
   return JSON.parse(text) as T;
 }
