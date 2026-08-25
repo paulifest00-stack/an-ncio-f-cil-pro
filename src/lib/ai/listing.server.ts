@@ -17,6 +17,7 @@ import {
   NAO_IDENTIFICADO,
   type Field,
   type Identificacao,
+  type ImageBrief,
   type ImagePlan,
   type Listing,
   type ListingSection,
