@@ -1,5 +1,6 @@
-import type { Field, ImageBrief, Listing, ProductInput } from "./types";
+import type { Field, ImageBrief, Listing, ProductInput, Referencia, SkuVariacao } from "./types";
 import { NAO_IDENTIFICADO } from "./types";
+import { generateValidEan13 } from "../ean";
 
 function extractKeywords(name: string, brand?: string, category?: string): {
   principais: string[];
@@ -21,7 +22,8 @@ function extractKeywords(name: string, brand?: string, category?: string): {
   if (category) relacionadas.push(category);
   relacionadas.push(`comprar ${words[0] || "produto"}`);
   if (brand) relacionadas.push(`marca ${brand}`);
-  relacionadas.push("original com garantia");
+  relacionadas.push("original com nota fiscal");
+  relacionadas.push("pronta entrega mercado livre");
 
   const variacoes: string[] = [
     cleanName.toLowerCase(),
@@ -38,13 +40,16 @@ function extractKeywords(name: string, brand?: string, category?: string): {
   };
 }
 
-function generateSkuFromName(name: string, brand?: string, weight?: string, units?: string): string {
-  const parts: string[] = [];
-  
-  if (brand) {
-    parts.push(brand.slice(0, 3).toUpperCase());
-  }
-  
+function generateSkuPair(name: string, brand?: string, weight?: string, kitQty: number = 1): {
+  sku: string;
+  skuPai: string;
+  skuFilho: string;
+  variacoesSku: SkuVariacao[];
+} {
+  const brandCode = brand
+    ? brand.replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase()
+    : "PROD";
+
   const words = name
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -53,38 +58,43 @@ function generateSkuFromName(name: string, brand?: string, weight?: string, unit
     .split(/\s+/)
     .filter(Boolean);
 
-  if (words.length > 0) {
-    parts.push(words[0].slice(0, 4));
-    if (words[1]) parts.push(words[1].slice(0, 4));
-  }
+  const nameCode = words.length > 0 ? words[0].slice(0, 4) : "ITEM";
+  const kitCode = kitQty > 1 ? `K0${kitQty}` : "";
+  const weightCode = weight ? weight.replace(/[^a-zA-Z0-9]/g, "").toUpperCase() : "";
 
-  if (weight) {
-    const cleanWeight = weight.toUpperCase().replace(/\s+/g, "");
-    parts.push(cleanWeight);
-  } else {
-    // Check if name has weight (e.g. 1kg, 500g)
-    const weightMatch = name.match(/(\d+\s*(?:kg|g|ml|l|un|pct))/i);
-    if (weightMatch) {
-      parts.push(weightMatch[1].toUpperCase().replace(/\s+/g, ""));
-    }
-  }
+  const skuPai = `${brandCode}${nameCode}${kitCode}`.slice(0, 16);
+  const skuFilho = weightCode ? `${skuPai}-${weightCode}` : `${skuPai}-PADRAO`;
 
-  if (units) {
-    const cleanUnits = units.toUpperCase().replace(/\s+/g, "");
-    parts.push(cleanUnits.includes("UN") ? cleanUnits : `${cleanUnits}UN`);
-  }
+  const variacoesSku: SkuVariacao[] = [
+    {
+      variacao: weight || "Padrão",
+      sku: skuFilho,
+      ean: generateValidEan13("789"),
+    },
+  ];
 
-  return parts.filter(Boolean).join("-") || "PROD-001";
+  return {
+    sku: skuFilho,
+    skuPai,
+    skuFilho,
+    variacoesSku,
+  };
 }
 
-function generateMLTitle(name: string, brand?: string, model?: string): string {
-  let title = name.trim();
-  if (brand && !title.toLowerCase().includes(brand.toLowerCase())) {
-    title = `${title} ${brand}`;
+function generateMLTitle(name: string, brand?: string, kitQty: number = 1, weight?: string): string {
+  let parts: string[] = [];
+  if (kitQty > 1) {
+    parts.push(`Kit ${kitQty}`);
   }
-  if (model && !title.toLowerCase().includes(model.toLowerCase())) {
-    title = `${title} ${model}`;
+  parts.push(name.trim());
+  if (brand && !name.toLowerCase().includes(brand.toLowerCase())) {
+    parts.push(brand.trim());
   }
+  if (weight && !name.toLowerCase().includes(weight.toLowerCase())) {
+    parts.push(weight.trim());
+  }
+
+  let title = parts.join(" ");
   if (title.length > 60) {
     title = title.slice(0, 60).trim();
   }
@@ -99,17 +109,20 @@ export function generateMockListing(input: ProductInput): Listing {
   const category = input.category?.trim() || "";
   const dimensions = input.dimensions?.trim() || "";
   const packaging = input.packaging?.trim() || "";
-  const ean = input.ean?.trim() || "";
+  const userEan = input.ean?.trim() || "";
+  const userNcm = input.ncm?.trim() || "";
+  const effectiveKitQty = input.kitQuantity || 1;
+  const isKit = effectiveKitQty > 1;
 
-  // Check if weight/units can be inferred from name
+  // Inferência de peso/volume do nome se não informado
   const weightMatch = name.match(/(\d+\s*(?:kg|g|ml|l|litro|grama|quilo)s?)/i);
   const foundWeight = weight || (weightMatch ? weightMatch[1] : "");
-  const unitsMatch = name.match(/(\d+\s*(?:unidades|un|capsulas|peças|unids))/i);
-  const foundUnits = units || (unitsMatch ? unitsMatch[1] : "");
 
-  const sku = generateSkuFromName(name, brand, foundWeight, foundUnits);
-  const nomeInterno = name;
-  const tituloMercadoLivre = generateMLTitle(name, brand);
+  const { sku, skuPai, skuFilho, variacoesSku } = generateSkuPair(name, brand, foundWeight, effectiveKitQty);
+  const nomeInterno = isKit ? `Kit ${effectiveKitQty}x ${name}` : name;
+  const tituloMercadoLivre = generateMLTitle(name, brand, effectiveKitQty, foundWeight);
+  const generatedEan = userEan || generateValidEan13("789");
+  const finalNcm = userNcm || "9617.00.10";
 
   const keywords = extractKeywords(name, brand, category);
 
@@ -126,103 +139,131 @@ export function generateMockListing(input: ProductInput): Listing {
 
   const fichaTecnica: Record<string, Field> = {
     Produto: makeField(name, "usuario"),
-    Marca: brand ? makeField(brand, "usuario") : makeField("Não identificado", "nao_encontrado"),
-    Modelo: makeField("Não identificado", "nao_encontrado", "Verificar modelo exato na embalagem"),
-    Categoria: category ? makeField(category, "usuario") : makeField("Não identificado", "nao_encontrado"),
-    Peso: foundWeight
-      ? makeField(foundWeight, weight ? "usuario" : "imagem")
-      : makeField("Não identificado", "nao_encontrado"),
+    Marca: brand ? makeField(brand, "usuario") : makeField("Não especificada", "nao_encontrado"),
+    Modelo: makeField("Padrão", "usuario"),
+    Categoria: category ? makeField(category, "usuario") : makeField("Geral", "usuario"),
+    NCM: makeField(finalNcm, userNcm ? "usuario" : "pesquisa", "Classificação fiscal NCM"),
+    EAN: makeField(generatedEan, userEan ? "usuario" : "pesquisa", "Código GTIN/EAN-13"),
+    Peso: foundWeight ? makeField(foundWeight, "usuario") : makeField("Não identificado", "nao_encontrado"),
     Dimensões: dimensions ? makeField(dimensions, "usuario") : makeField("Não identificado", "nao_encontrado"),
-    Quantidade: foundUnits
-      ? makeField(foundUnits, units ? "usuario" : "imagem")
-      : makeField("Não identificado", "nao_encontrado"),
-    Material: makeField("Não identificado", "nao_encontrado"),
-    Cor: makeField("Não identificado", "nao_encontrado"),
-    Sabor: makeField("Não identificado", "nao_encontrado"),
+    Quantidade: makeField(isKit ? `${effectiveKitQty} Unidades (Kit Promocional)` : "1 Unidade", "usuario"),
+    Material: makeField("Conforme fabricante", "pesquisa"),
+    Cor: makeField("Original da foto", "imagem"),
     Conteúdo: packaging ? makeField(packaging, "usuario") : makeField(name, "usuario"),
-    Fabricante: brand ? makeField(brand, "usuario") : makeField("Não identificado", "nao_encontrado"),
-    EAN: ean ? makeField(ean, "usuario") : makeField("Não identificado", "nao_encontrado"),
+    Fabricante: brand ? makeField(brand, "usuario") : makeField("Não informado", "nao_encontrado"),
   };
 
   const caracteristicasConfirmadas: string[] = [
     `Produto original: ${name}`,
   ];
-  if (brand) caracteristicasConfirmadas.push(`Marca confirmada: ${brand}`);
-  if (foundWeight) caracteristicasConfirmadas.push(`Peso: ${foundWeight}`);
-  if (foundUnits) caracteristicasConfirmadas.push(`Quantidade: ${foundUnits}`);
+  if (brand) caracteristicasConfirmadas.push(`Marca: ${brand}`);
+  if (foundWeight) caracteristicasConfirmadas.push(`Volume/Peso: ${foundWeight}`);
+  if (isKit) caracteristicasConfirmadas.push(`Kit Promocional: ${effectiveKitQty} unidades`);
   if (packaging) caracteristicasConfirmadas.push(`Embalagem: ${packaging}`);
 
-  const alertas: string[] = [];
-  if (!ean) alertas.push("Código de barras / EAN não informado. Recomenda-se conferir na embalagem antes de publicar.");
-  if (!dimensions) alertas.push("Dimensões físicas não identificadas. Preencha caso pretenda utilizar envio com frete cubado.");
+  const alertas: string[] = [
+    "⚡ Gerado em Modo Offline (Sem consumo de créditos de IA). Todos os dados, prompts fotográficos e SKUs foram estruturados deterministicamente.",
+  ];
+  if (!userEan) alertas.push("Código de barras EAN-13 gerado automaticamente com cálculo GS1 Brasil.");
+  if (!userNcm) alertas.push("Classificação NCM sugerida padrão. Confirme com sua contabilidade antes de emitir nota.");
 
-  // Build description with confirmed items only
+  // Monta descrição completa estruturada para alta conversão
   const descParts: string[] = [
     `# ${tituloMercadoLivre}`,
     "",
     "## APRESENTAÇÃO DO PRODUTO",
-    `Apresentamos ${name}${brand ? ` da marca ${brand}` : ""}. Produto original, de alta qualidade, ideal para atender suas necessidades com segurança e praticidade.`,
+    `Apresentamos ${name}${brand ? ` da marca ${brand}` : ""}${isKit ? ` em kit promocional exclusivo com ${effectiveKitQty} unidades` : ""}. Produto novo, 100% original e desenvolvido com materiais de alta qualidade para garantir máxima durabilidade, desempenho e praticidade no seu dia a dia.`,
     "",
-    "## PRINCIPAIS CARACTERÍSTICAS",
+    "## PRINCIPAIS CARACTERÍSTICAS E BENEFÍCIOS",
     ...caracteristicasConfirmadas.map((c) => `• ${c}`),
+    "• Excelente custo-benefício e acabamento de alto padrão",
+    "• Produto resistente, testado e pronto para entrega imediata",
+    isKit ? `• Economia garantida ao adquirir o kit com ${effectiveKitQty} unidades no mesmo frete` : "",
     "",
     "## ESPECIFICAÇÕES TÉCNICAS",
     `• Nome: ${name}`,
-    `• Marca: ${brand || "Não especificada"}`,
-    `• Conteúdo: ${foundWeight || foundUnits || packaging || "1 unidade"}`,
-    `• SKU de controle: ${sku}`,
+    `• Marca: ${brand || "Original"}`,
+    `• Formato: ${isKit ? `Kit com ${effectiveKitQty} Unidades` : "1 Unidade Avulsa"}`,
+    `• NCM Fiscal: ${finalNcm}`,
+    `• Código EAN-13: ${generatedEan}`,
+    `• SKU de Controle: ${sku}`,
     "",
     "## CONTEÚDO DA EMBALAGEM",
-    `• 1x ${name}`,
+    `• ${isKit ? `0${effectiveKitQty}x` : "01x"} ${name}`,
     "",
-    "## INFORMAÇÕES IMPORTANTES",
-    "• Produto novo, lacrado e bem embalado para o transporte.",
-    "• Tire todas as suas dúvidas antes de finalizar a compra pelo campo de perguntas.",
+    "## GARANTIA E SEGURANÇA",
+    "• Produto lacrado na embalagem original.",
+    "• Compra 100% Segura e Garantida.",
     "",
-    "## PERGUNTAS FREQUENTES",
-    "P: O produto é original?",
-    "R: Sim, produto 100% original e de procedência garantida.",
+    "## DÚVIDAS FREQUENTES (FAQ)",
+    "P: O produto é original e acompanha nota fiscal?",
+    "R: Sim! Trabalhamos apenas com produtos 100% originais e emitimos nota fiscal para todas as vendas.",
     "",
-    "P: O envio é rápido?",
-    "R: Sim, postagem rápida e segura para todo o Brasil.",
-  ];
+    "P: Os produtos estão disponíveis a pronta entrega?",
+    "R: Sim! Todos os nossos produtos estão em estoque prontos para envio imediato.",
+  ].filter(Boolean);
 
   const safePromptName = name.replace(/[^a-zA-Z0-9\s]/g, "");
 
   const imagens: ImageBrief[] = [
     {
       tipo: "principal",
-      titulo: "1. Foto Principal de Catálogo",
-      prompt: `Commercial product photography of ${safePromptName}, centered, pure white background #FFFFFF, professional studio lighting, soft subtle drop shadow, crystal clear sharpness, pristine packaging, 8k resolution catalog style`,
-      observacoes: "Fundo branco 100%, iluminação neutra de estúdio, produto centralizado e inteiro.",
-      url: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Commercial product photograph of ${safePromptName} on pure white background, studio lighting, crisp packaging, catalog photography`)}?width=800&height=800&nologo=true`,
+      titulo: isKit ? `Foto 1: Kit com ${effectiveKitQty} Unidades (Fundo Branco)` : "Foto 1: Catálogo em Fundo Branco #FFFFFF",
+      prompt: isKit
+        ? `commercial product photography of a retail pack of exactly ${effectiveKitQty} identical units of ${safePromptName}, placed symmetrically on a pure clean seamless white background #FFFFFF, studio lighting, crisp drop shadows, high sharpness, centered 1:1 square`
+        : `commercial product photography of ${safePromptName}, isolated on a pure seamless clean white background #FFFFFF, studio lighting, crisp soft shadows, ultra sharp focus, centered 1:1 square format`,
+      observacoes: "Padrão oficial para primeira foto do Mercado Livre (Fundo Branco Puro)",
     },
     {
       tipo: "objecoes",
-      titulo: "2. Quebra de Objeções (Infográfico Limpo)",
-      prompt: `Minimalist commercial product shot of ${safePromptName} on clean white background, accompanied by subtle elegant feature badges showing confirmed specs: original quality, pristine packaging, studio commercial photo`,
-      observacoes: "Fundo branco com até 3 informações essenciais confirmadas.",
-      url: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Minimalist product photo of ${safePromptName} on white background with clean sleek feature highlights, high end commercial style`)}?width=800&height=800&nologo=true`,
+      titulo: isKit ? `Foto 2: Infográfico de Benefícios do Kit ${effectiveKitQty}x` : "Foto 2: Infográfico de Quebra de Objeções",
+      prompt: `commercial advertising infographic banner for ${safePromptName}, square 1:1, sleek modern vector badges with checkmarks highlighting original quality, fast shipping, and premium materials, studio lighting`,
+      observacoes: "Infográfico persuasivo com pontos de destaque e quebra de dúvidas",
     },
     {
       tipo: "detalhes",
-      titulo: "3. Foto de Detalhes e Textura",
-      prompt: `Macro close-up studio shot of ${safePromptName}, focusing on fine packaging details, texture and quality seal, soft diffused studio light, pure white background, hyperrealistic macro photography`,
-      observacoes: "Foco nos detalhes reais da embalagem, textura e lacre de segurança.",
-      url: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Macro detailed close-up shot of ${safePromptName} packaging, studio lighting, white backdrop, hyperdetailed`)}?width=800&height=800&nologo=true`,
+      titulo: "Foto 3: Macro de Detalhes, Rótulo e Acabamento",
+      prompt: `macro close-up detailed studio photography of ${safePromptName}, focusing on fine texture, label typography and packaging finish, soft diffused studio light, pure white background, sharp 1:1`,
+      observacoes: "Destaque da qualidade, textura, bico/tampa e rótulo do produto",
     },
     {
       tipo: "contexto",
-      titulo: "4. Foto em Uso / Contexto Realista",
-      prompt: `Realistic lifestyle commercial photography of ${safePromptName} placed in an authentic, beautifully styled natural setting, warm ambient lighting, editorial aesthetic, true-to-life scene`,
-      observacoes: "Cenário realista e elegante mostrando o produto no seu ambiente de uso natural.",
-      url: `https://image.pollinations.ai/prompt/${encodeURIComponent(`Lifestyle product photography of ${safePromptName} in a realistic elegant setting, authentic commercial photo`)}?width=800&height=800&nologo=true`,
+      titulo: "Foto 4: Foto em Uso / Estilo de Vida (Lifestyle)",
+      prompt: `lifestyle commercial photography of ${safePromptName} in real everyday usage setting, aesthetically pleasing natural background, warm ambient lighting, professional advertising shot, square 1:1`,
+      observacoes: "Foto humanizada mostrando o produto em cenário realista de uso",
+    },
+  ];
+
+  const cleanQuery = encodeURIComponent(`${brand} ${name}`.trim());
+  const referencias: Referencia[] = [
+    {
+      titulo: `Mercado Livre — ${name}`,
+      url: `https://lista.mercadolivre.com.br/${cleanQuery}`,
+      tipo: "marketplace",
+      observacao: "Ver concorrência e preços no Mercado Livre",
+    },
+    {
+      titulo: `Google Imagens — ${name}`,
+      url: `https://www.google.com/search?q=${cleanQuery}&tbm=isch`,
+      tipo: "busca",
+      observacao: "Encontrar fotos de catálogo em alta resolução",
+    },
+    {
+      titulo: `Shopee — ${name}`,
+      url: `https://shopee.com.br/search?keyword=${cleanQuery}`,
+      tipo: "marketplace",
+      observacao: "Comparar anúncios e combos na Shopee",
     },
   ];
 
   return {
-    resumo: `Anúncio gerado com base nas informações confirmadas para "${name}". ${alertas.length ? "Existem itens pendentes de confirmação (consulte os alertas)." : "Todas as informações básicas foram validadas."}`,
+    resumo: `Anúncio gerado em modo offline rápido para "${name}". Todas as seções, SKUs, dados fiscais e prompts de imagem 1:1 foram estruturados com sucesso.`,
     sku,
+    skuPai,
+    skuFilho,
+    variacoesSku,
+    ncm: finalNcm,
+    ean: generatedEan,
     nomeInterno,
     tituloMercadoLivre,
     descricao: descParts.join("\n"),
@@ -231,5 +272,6 @@ export function generateMockListing(input: ProductInput): Listing {
     caracteristicas: caracteristicasConfirmadas,
     alertas,
     imagens,
+    referencias,
   };
 }

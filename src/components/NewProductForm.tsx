@@ -89,8 +89,8 @@ export function NewProductForm({
 
       if (res) {
         if (res.status === "sem_creditos" || res.error?.includes("Créditos") || res.error?.includes("402")) {
-          setError("Seus créditos de IA no Lovable estão esgotados no momento. Você ainda pode preencher os campos e salvar normalmente!");
-          setScanSuccessMsg(null);
+          setScanSuccessMsg("⚡ Modo Offline: Digite o nome do produto abaixo para gerar o anúncio completo.");
+          setError(null);
           return;
         }
 
@@ -134,15 +134,13 @@ export function NewProductForm({
         if (foundItems.length > 0) {
           setScanSuccessMsg(`Foto identificada: ${foundItems.slice(0, 2).join(" • ")}`);
         } else {
-          setScanSuccessMsg(null);
+          setScanSuccessMsg("Foto carregada. Preencha o nome do produto abaixo para gerar.");
         }
       }
     } catch (err) {
-      console.warn("Falha no escaneamento automático da foto:", err);
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes("402") || msg.toLowerCase().includes("crédito")) {
-        setError("Seus créditos de IA no Lovable estão esgotados no momento.");
-      }
+      console.warn("Falha no escaneamento da foto, ativando modo offline:", err);
+      setScanSuccessMsg("⚡ Modo Offline: Digite o nome do produto abaixo para gerar o anúncio.");
+      setError(null);
     } finally {
       setIsScanning(false);
     }

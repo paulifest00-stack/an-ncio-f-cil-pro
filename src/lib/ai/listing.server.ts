@@ -13,6 +13,7 @@ import {
   userDataBlock,
 } from "./prompts.server";
 import { generateValidEan13 } from "../ean";
+import { generateMockListing } from "./mock.server";
 import {
   NAO_IDENTIFICADO,
   type Field,
@@ -394,22 +395,73 @@ export async function scanProductPhoto(
 }
 
 export async function buildListing(input: ProductInput): Promise<Listing> {
-  let idResult: Identificacao;
+  try {
+    let idResult: Identificacao;
 
-  // Se já temos a identificação pré-escaneada da foto, reutilizamos diretamente para evitar redundância e economizar tokens/créditos
-  if (input.cachedIdentificacao && (input.cachedIdentificacao.produto || input.cachedIdentificacao.marca)) {
-    idResult = {
-      ...input.cachedIdentificacao,
-      produto: input.basicName || input.cachedIdentificacao.produto,
-      marca: input.brand || input.cachedIdentificacao.marca,
-      volume: input.weight || input.cachedIdentificacao.volume,
-    };
-  } else {
-    // ETAPA 1: Identificação visual minuciosa do produto na foto
-    const idMessages: ChatMessage[] = [
+    // Se já temos a identificação pré-escaneada da foto, reutilizamos diretamente para evitar redundância e economizar tokens/créditos
+    if (input.cachedIdentificacao && (input.cachedIdentificacao.produto || input.cachedIdentificacao.marca)) {
+      idResult = {
+        ...input.cachedIdentificacao,
+        produto: input.basicName || input.cachedIdentificacao.produto,
+        marca: input.brand || input.cachedIdentificacao.marca,
+        volume: input.weight || input.cachedIdentificacao.volume,
+      };
+    } else {
+      // ETAPA 1: Identificação visual minuciosa do produto na foto
+      const idMessages: ChatMessage[] = [
+        {
+          role: "system",
+          content: `Você é um especialista em identificação de produtos e embalagens.\n${REGRA_OURO}`,
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: [
+                PASSO1,
+                "",
+                "Dados informados pelo usuário (se houver):",
+                userDataBlock(input) || "- (somente foto e nome básico)",
+              ].join("\n"),
+            },
+            { type: "image_url", image_url: { url: input.photoDataUrl } },
+          ],
+        },
+      ];
+
+      try {
+        idResult = await chatJson<Identificacao>(idMessages);
+      } catch (err) {
+        console.error("Erro no Passo 1 de identificação:", err);
+        idResult = {
+          produto: input.basicName,
+          marca: input.brand || "",
+          linha: "",
+          variacao: "",
+          volume: "",
+          leituraEmbalagem: [],
+          certeza: "media",
+          duvidas: [],
+          corAcento: "#141414",
+          proporcao: 1.0,
+          layout: "C",
+          termosBusca: [
+            `${input.brand || ""} ${input.basicName}`.trim(),
+            input.basicName,
+          ],
+        };
+      }
+    }
+
+    // Monta as referências de busca na internet
+    const referencias = buildSearchReferences(idResult, input);
+
+    // ETAPA 2 & 3: Levantamento de pontos de quebra de objeções e plano de layout
+    const planMessages: ChatMessage[] = [
       {
         role: "system",
-        content: `Você é um especialista em identificação de produtos e embalagens.\n${REGRA_OURO}`,
+        content: `Você é um especialista em design de anúncios de alta conversão para marketplace.\n${REGRA_OURO}`,
       },
       {
         role: "user",
@@ -417,10 +469,12 @@ export async function buildListing(input: ProductInput): Promise<Listing> {
           {
             type: "text",
             text: [
-              PASSO1,
+              identificacaoBlock(idResult),
               "",
-              "Dados informados pelo usuário (se houver):",
+              "Dados do usuário:",
               userDataBlock(input) || "- (somente foto e nome básico)",
+              "",
+              PASSO2_PONTOS,
             ].join("\n"),
           },
           { type: "image_url", image_url: { url: input.photoDataUrl } },
@@ -428,155 +482,107 @@ export async function buildListing(input: ProductInput): Promise<Listing> {
       },
     ];
 
+    let planResult: ImagePlan;
     try {
-      idResult = await chatJson<Identificacao>(idMessages);
+      planResult = await chatJson<ImagePlan>(planMessages);
+      // Assegura que o layout e cor de acento coincidam ou respeitem a proporção
+      if (!planResult.corAcento || planResult.corAcento === "#000000") {
+        planResult.corAcento = idResult.corAcento || "#141414";
+      }
     } catch (err) {
-      console.error("Erro no Passo 1 de identificação:", err);
-      idResult = {
-        produto: input.basicName,
-        marca: input.brand || "",
-        linha: "",
-        variacao: "",
-        volume: "",
-        leituraEmbalagem: [],
-        certeza: "media",
-        duvidas: [],
-        corAcento: "#141414",
-        proporcao: 1.0,
-        layout: "C",
-        termosBusca: [
-          `${input.brand || ""} ${input.basicName}`.trim(),
-          input.basicName,
+      console.error("Erro no Passo 2/3 de planejamento de imagem:", err);
+      planResult = {
+        proporcao: idResult.proporcao || 1.0,
+        layout: idResult.layout || "C",
+        corAcento: idResult.corAcento || "#141414",
+        titulo: {
+          linha1: idResult.produto || input.basicName,
+          linha2: idResult.linha || idResult.marca || input.brand || "Original",
+          linha3: idResult.volume || "Pronto Entrega",
+        },
+        pontos: [
+          { texto: "PRODUTO 100% ORIGINAL", icone: "shield", fonte: "rótulo" },
+          { texto: "ALTA QUALIDADE E DURABILIDADE", icone: "star", fonte: "rótulo" },
+          { texto: "ENVIO RÁPIDO E SEGURO", icone: "box", fonte: "usuário" },
+          { texto: "PRONTO PARA USO", icone: "check", fonte: "rótulo" },
         ],
+        naoConfirmado: [],
       };
     }
-  }
 
-  // Monta as referências de busca na internet
-  const referencias = buildSearchReferences(idResult, input);
-
-  // ETAPA 2 & 3: Levantamento de pontos de quebra de objeções e plano de layout
-  const planMessages: ChatMessage[] = [
-    {
-      role: "system",
-      content: `Você é um especialista em design de anúncios de alta conversão para marketplace.\n${REGRA_OURO}`,
-    },
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: [
-            identificacaoBlock(idResult),
-            "",
-            "Dados do usuário:",
-            userDataBlock(input) || "- (somente foto e nome básico)",
-            "",
-            PASSO2_PONTOS,
-          ].join("\n"),
-        },
-        { type: "image_url", image_url: { url: input.photoDataUrl } },
-      ],
-    },
-  ];
-
-  let planResult: ImagePlan;
-  try {
-    planResult = await chatJson<ImagePlan>(planMessages);
-    // Assegura que o layout e cor de acento coincidam ou respeitem a proporção
-    if (!planResult.corAcento || planResult.corAcento === "#000000") {
-      planResult.corAcento = idResult.corAcento || "#141414";
-    }
-  } catch (err) {
-    console.error("Erro no Passo 2/3 de planejamento de imagem:", err);
-    planResult = {
-      proporcao: idResult.proporcao || 1.0,
-      layout: idResult.layout || "C",
-      corAcento: idResult.corAcento || "#141414",
-      titulo: {
-        linha1: idResult.produto || input.basicName,
-        linha2: idResult.linha || idResult.marca || input.brand || "Original",
-        linha3: idResult.volume || "Pronto Entrega",
+    // ETAPA 4: Geração do anúncio completo (Mercado Livre + Bling + SKU Pai/Filho)
+    const listingMessages: ChatMessage[] = [
+      {
+        role: "system",
+        content: `Você é o maior especialista em criação de anúncios para Mercado Livre e cadastro no ERP Bling.\n${REGRA_OURO}`,
       },
-      pontos: [
-        { texto: "PRODUTO 100% ORIGINAL", icone: "shield", fonte: "rótulo" },
-        { texto: "ALTA QUALIDADE E DURABILIDADE", icone: "star", fonte: "rótulo" },
-        { texto: "ENVIO RÁPIDO E SEGURO", icone: "box", fonte: "usuário" },
-        { texto: "PRONTO PARA USO", icone: "check", fonte: "rótulo" },
-      ],
-      naoConfirmado: [],
-    };
-  }
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: [
+              "Gere o anúncio completo e os SKUs padronizados seguindo rigorosamente o esquema abaixo.",
+              "",
+              identificacaoBlock(idResult),
+              "",
+              "Plano da Imagem de Objeções gerado:",
+              JSON.stringify(planResult, null, 2),
+              "",
+              "Dados informados pelo usuário:",
+              userDataBlock(input) || "- (somente foto e nome básico)",
+              "",
+              IMAGENS_REGRAS,
+              "",
+              SCHEMA,
+            ].join("\n"),
+          },
+          { type: "image_url", image_url: { url: input.photoDataUrl } },
+        ],
+      },
+    ];
 
-  // ETAPA 4: Geração do anúncio completo (Mercado Livre + Bling + SKU Pai/Filho)
-  const listingMessages: ChatMessage[] = [
-    {
-      role: "system",
-      content: `Você é o maior especialista em criação de anúncios para Mercado Livre e cadastro no ERP Bling.\n${REGRA_OURO}`,
-    },
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: [
-            "Gere o anúncio completo e os SKUs padronizados seguindo rigorosamente o esquema abaixo.",
-            "",
-            identificacaoBlock(idResult),
-            "",
-            "Plano da Imagem de Objeções gerado:",
-            JSON.stringify(planResult, null, 2),
-            "",
-            "Dados informados pelo usuário:",
-            userDataBlock(input) || "- (somente foto e nome básico)",
-            "",
-            IMAGENS_REGRAS,
-            "",
-            SCHEMA,
-          ].join("\n"),
-        },
-        { type: "image_url", image_url: { url: input.photoDataUrl } },
-      ],
-    },
-  ];
+    const rawListing = await chatJson<Partial<Listing>>(listingMessages);
+    const listing = normalize(rawListing, input);
 
-  const rawListing = await chatJson<Partial<Listing>>(listingMessages);
-  const listing = normalize(rawListing, input);
+    // Vincula os dados estruturados da identificação, referências e plano de imagem
+    listing.identificacao = idResult;
+    listing.referencias = referencias;
 
-  // Vincula os dados estruturados da identificação, referências e plano de imagem
-  listing.identificacao = idResult;
-  listing.referencias = referencias;
-
-  // Atualiza ou insere o prompt definitivo da imagem de quebra de objeções
-  const objectionPrompt = objectionImagePrompt(planResult);
-  let objImg = listing.imagens.find((i) => i.tipo === "objecoes");
-  if (!objImg) {
-    objImg = {
-      tipo: "objecoes",
-      titulo: "Arte de Quebra de Objeções (Infográfico)",
-      prompt: objectionPrompt,
-      observacoes: `Layout ${planResult.layout} baseado na proporção ${planResult.proporcao.toFixed(2)}`,
-      plano: planResult,
-    };
-    listing.imagens.push(objImg);
-  } else {
-    objImg.prompt = objectionPrompt;
-    objImg.observacoes = `Layout ${planResult.layout} (Proporção ${planResult.proporcao.toFixed(2)})`;
-    objImg.plano = planResult;
-  }
-
-  // Se houver dúvidas não confirmadas em idResult ou planResult, anexa aos alertas
-  const extraAlerts = [
-    ...idResult.duvidas,
-    ...(planResult.naoConfirmado || []),
-  ].filter(Boolean);
-  for (const alert of extraAlerts) {
-    if (!listing.alertas.includes(alert)) {
-      listing.alertas.push(alert);
+    // Atualiza ou insere o prompt definitivo da imagem de quebra de objeções
+    const objectionPrompt = objectionImagePrompt(planResult);
+    let objImg = listing.imagens.find((i) => i.tipo === "objecoes");
+    if (!objImg) {
+      objImg = {
+        tipo: "objecoes",
+        titulo: "Arte de Quebra de Objeções (Infográfico)",
+        prompt: objectionPrompt,
+        observacoes: `Layout ${planResult.layout} baseado na proporção ${planResult.proporcao.toFixed(2)}`,
+        plano: planResult,
+      };
+      listing.imagens.push(objImg);
+    } else {
+      objImg.prompt = objectionPrompt;
+      objImg.observacoes = `Layout ${planResult.layout} (Proporção ${planResult.proporcao.toFixed(2)})`;
+      objImg.plano = planResult;
     }
-  }
 
-  return listing;
+    // Se houver dúvidas não confirmadas em idResult ou planResult, anexa aos alertas
+    const extraAlerts = [
+      ...idResult.duvidas,
+      ...(planResult.naoConfirmado || []),
+    ].filter(Boolean);
+    for (const alert of extraAlerts) {
+      if (!listing.alertas.includes(alert)) {
+        listing.alertas.push(alert);
+      }
+    }
+
+    return listing;
+  } catch (err) {
+    console.warn("Falha na geração via IA (provável falta de créditos ou indisponibilidade). Ativando Modo Offline determinístico:", err);
+    return generateMockListing(input);
+  }
 }
 
 const SECTION_LABEL: Record<ListingSection, string> = {
@@ -595,54 +601,66 @@ export async function regenerate(
   listing: Listing,
 ): Promise<Partial<Listing>> {
   const key = SECTION_LABEL[section];
-  const result = await chatJson<Partial<Listing>>([
-    {
-      role: "system",
-      content: `Você é um especialista em anúncios de marketplace (Mercado Livre e Bling).\n${REGRA_OURO}\n${REGRAS_SKU}`,
-    },
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: [
-            `Regenere APENAS o campo "${key}" do anúncio, mantendo as informações já confirmadas e sem criar novas características.`,
-            "",
-            "Dados do usuário:",
-            userDataBlock(input) || "- (somente foto e nome básico)",
-            "",
-            "Anúncio atual (contexto confirmado):",
-            listingContext(listing),
-            "",
-            section === "imagens" ? IMAGENS_REGRAS : "",
-            "",
-            `Responda somente com JSON: { "${key}": ... } no mesmo formato do anúncio.`,
-            SCHEMA,
-          ].join("\n"),
-        },
-        { type: "image_url", image_url: { url: input.photoDataUrl } },
-      ],
-    },
-  ]);
+  try {
+    const result = await chatJson<Partial<Listing>>([
+      {
+        role: "system",
+        content: `Você é um especialista em anúncios de marketplace (Mercado Livre e Bling).\n${REGRA_OURO}\n${REGRAS_SKU}`,
+      },
+      {
+        role: "user",
+        content: [
+          {
+            type: "text",
+            text: [
+              `Regenere APENAS o campo "${key}" do anúncio, mantendo as informações já confirmadas e sem criar novas características.`,
+              "",
+              "Dados do usuário:",
+              userDataBlock(input) || "- (somente foto e nome básico)",
+              "",
+              "Anúncio atual (contexto confirmado):",
+              listingContext(listing),
+              "",
+              section === "imagens" ? IMAGENS_REGRAS : "",
+              "",
+              `Responda somente com JSON: { "${key}": ... } no mesmo formato do anúncio.`,
+              SCHEMA,
+            ].join("\n"),
+          },
+          { type: "image_url", image_url: { url: input.photoDataUrl } },
+        ],
+      },
+    ]);
 
-  if (section === "fichaTecnica") {
-    const ficha: Record<string, Field> = {};
-    for (const [k, v] of Object.entries(
-      (result.fichaTecnica ?? {}) as Record<string, unknown>,
-    )) {
-      ficha[k] = normalizeField(v);
+    if (section === "fichaTecnica") {
+      const ficha: Record<string, Field> = {};
+      for (const [k, v] of Object.entries(
+        (result.fichaTecnica ?? {}) as Record<string, unknown>,
+      )) {
+        ficha[k] = normalizeField(v);
+      }
+      return { fichaTecnica: ficha };
     }
-    return { fichaTecnica: ficha };
+    if (section === "sku") {
+      return {
+        sku: result.sku ?? listing.sku,
+        skuPai: result.skuPai ?? listing.skuPai,
+        skuFilho: result.skuFilho ?? listing.skuFilho,
+        variacoesSku: result.variacoesSku ?? listing.variacoesSku,
+      };
+    }
+    return { [key]: result[key as keyof Listing] } as Partial<Listing>;
+  } catch (err) {
+    console.warn(`Falha na regeneração da seção ${section} via IA. Aplicando fallback offline:`, err);
+    const mock = generateMockListing(input);
+    if (section === "tituloMercadoLivre") return { tituloMercadoLivre: mock.tituloMercadoLivre };
+    if (section === "descricao") return { descricao: mock.descricao };
+    if (section === "palavrasChave") return { palavrasChave: mock.palavrasChave };
+    if (section === "fichaTecnica") return { fichaTecnica: mock.fichaTecnica };
+    if (section === "sku") return { sku: mock.sku, skuPai: mock.skuPai, skuFilho: mock.skuFilho, variacoesSku: mock.variacoesSku };
+    if (section === "imagens") return { imagens: mock.imagens };
+    return {};
   }
-  if (section === "sku") {
-    return {
-      sku: result.sku ?? listing.sku,
-      skuPai: result.skuPai ?? listing.skuPai,
-      skuFilho: result.skuFilho ?? listing.skuFilho,
-      variacoesSku: result.variacoesSku ?? listing.variacoesSku,
-    };
-  }
-  return { [key]: result[key as keyof Listing] } as Partial<Listing>;
 }
 
 export async function renderAdImage(
