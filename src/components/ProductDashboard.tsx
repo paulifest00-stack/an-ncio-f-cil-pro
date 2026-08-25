@@ -21,6 +21,7 @@ import {
   Loader2,
   Package,
   Palette,
+  Plus,
   RefreshCw,
   Search,
   Share2,
@@ -36,6 +37,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CopyBlock } from "@/components/CopyBlock";
+import { Input } from "@/components/ui/input";
 import type {
   Field,
   ImageBrief,
@@ -136,6 +138,8 @@ export function ProductDashboard({
     Record<number, { loading: boolean; url?: string; error?: string }>
   >({});
   const [expandedPrompt, setExpandedPrompt] = useState<Record<number, boolean>>({});
+  const [showKitModal, setShowKitModal] = useState(false);
+  const [customKitInput, setCustomKitInput] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   // Inicializa o estado das imagens com base no que já foi salvo anteriormente
@@ -162,7 +166,7 @@ export function ProductDashboard({
     setError(null);
     try {
       const result = await regenerateSection({
-        data: { section, input, listing },
+        data: { section, input: { ...input, kitQuantity: listing.kitQuantity }, listing },
       });
       registerUsage("texto");
       patch(result as Partial<Listing>);
@@ -232,14 +236,97 @@ export function ProductDashboard({
     patch({ variacoesSku: updatedVars });
   };
 
+  // Transforma o anúncio existente em Kit ou altera a quantidade
+  const handleSetKitQuantity = (newQty: number) => {
+    const isKit = newQty > 1;
+    const prodName = listing.nomeInterno || input.basicName || "Produto";
+    
+    // Atualiza ficha técnica
+    const updatedFicha = { ...listing.fichaTecnica };
+    if (isKit) {
+      updatedFicha["Quantidade"] = {
+        value: `${newQty} Unidades (Kit Promocional)`,
+        source: "usuario",
+        note: `Kit com ${newQty} unidades`,
+      };
+    } else {
+      updatedFicha["Quantidade"] = {
+        value: "1 Unidade",
+        source: "usuario",
+      };
+    }
+
+    // Atualiza prompts de imagens para o novo formato de kit
+    const updatedImagens = listing.imagens.map((img) => {
+      if (img.tipo === "principal") {
+        return {
+          ...img,
+          titulo: isKit ? `Foto Principal do Kit (${newQty} Unidades - Fundo Branco)` : "Foto Principal (Fundo Branco #FFFFFF)",
+          prompt: isKit
+            ? `commercial product photography of a retail kit containing exactly ${newQty} identical units of ${prodName}, arranged symmetrically side-by-side on a pure seamless clean white background #FFFFFF, studio lighting, crisp contact shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format`
+            : `commercial product photography of ${prodName}, isolated on a pure seamless clean white background #FFFFFF, studio lighting, soft shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format`,
+          observacoes: isKit ? `Foto Principal do Kit com ${newQty} unidades agrupadas em Fundo Branco Puro #FFFFFF` : "Padrão oficial Mercado Livre para primeira foto de catálogo (Fundo Branco Puro)",
+        };
+      }
+      if (img.tipo === "objecoes") {
+        return {
+          ...img,
+          titulo: isKit ? `Arte de Quebra de Objeções (Kit ${newQty} Unidades)` : "Arte de Quebra de Objeções (Infográfico)",
+          prompt: isKit
+            ? `commercial advertising infographic banner for Kit with ${newQty} units of ${prodName}, square 1:1, modern clean vector badges highlighting kit value and pack savings, crisp typography, studio lighting`
+            : img.prompt,
+        };
+      }
+      if (img.tipo === "contexto") {
+        return {
+          ...img,
+          titulo: isKit ? `Foto em Uso / Ambiente (Kit ${newQty} Unidades)` : "Foto em Uso / Ambiente Realista",
+          prompt: isKit
+            ? `lifestyle commercial photography of the ${newQty}-unit kit of ${prodName} in real everyday usage scenario, aesthetically pleasing background, warm natural lighting, professional advertising shot, square 1:1`
+            : img.prompt,
+        };
+      }
+      return img;
+    });
+
+    // Ajusta o título se for virar kit
+    let newTitle = listing.tituloMercadoLivre;
+    if (isKit && !newTitle.toLowerCase().includes("kit")) {
+      const cleanBase = newTitle.replace(/^kit\s*\d*x?\s*/i, "").trim();
+      newTitle = `Kit ${newQty} ${cleanBase}`.slice(0, 60);
+    } else if (!isKit) {
+      newTitle = newTitle.replace(/^kit\s*\d*x?\s*/i, "").trim();
+    }
+
+    // Ajusta SKU se for virar kit
+    let newSkuPai = listing.skuPai || listing.sku;
+    if (isKit && !newSkuPai.includes(`K0${newQty}`) && !newSkuPai.includes(`K${newQty}`)) {
+      newSkuPai = `${newSkuPai}K0${newQty}`.slice(0, 16);
+    }
+
+    input.kitQuantity = newQty;
+    patch({
+      kitQuantity: newQty,
+      tituloMercadoLivre: newTitle,
+      skuPai: newSkuPai,
+      sku: newSkuPai,
+      fichaTecnica: updatedFicha,
+      imagens: updatedImagens,
+    });
+    setShowKitModal(false);
+  };
+
   const id = listing.identificacao;
   const currentNcm = listing.ncm || listing.fichaTecnica?.["NCM"]?.value || "";
   const currentEan = listing.ean || listing.fichaTecnica?.["EAN"]?.value || "";
+  const effectiveKitQty = listing.kitQuantity || input.kitQuantity || 1;
+  const isKitActive = effectiveKitQty > 1;
 
   const anuncioCompleto = [
     `SKU: ${listing.sku}`,
     listing.skuPai ? `SKU Pai: ${listing.skuPai}` : "",
     listing.skuFilho ? `SKU Filho: ${listing.skuFilho}` : "",
+    isKitActive ? `Formato: KIT PROMOCIONAL (${effectiveKitQty} UNIDADES)` : "Formato: 1 Unidade (Avulso)",
     currentNcm ? `NCM: ${currentNcm}` : "",
     currentEan ? `EAN-13: ${currentEan}` : "",
     `Nome interno (Bling): ${listing.nomeInterno}`,
@@ -293,6 +380,11 @@ export function ProductDashboard({
                 <h1 className="truncate text-lg font-bold tracking-tight text-foreground sm:text-xl">
                   {listing.nomeInterno || input.basicName}
                 </h1>
+                {isKitActive ? (
+                  <Badge className="bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider">
+                    Kit {effectiveKitQty}x
+                  </Badge>
+                ) : null}
                 {id?.layout ? (
                   <Badge variant="outline" className="rounded-lg px-2 py-0 text-[10px] font-bold uppercase tracking-wider">
                     Layout {id.layout} (1:1)
@@ -326,6 +418,19 @@ export function ProductDashboard({
 
           {/* Botões de Ação Topo */}
           <div className="flex items-center gap-2 self-end sm:self-center">
+            {/* Botão de Montar / Mudar Kit */}
+            <motion.div whileTap={{ scale: 0.95 }}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowKitModal(!showKitModal)}
+                className="h-8 gap-1.5 rounded-xl border-primary/40 bg-primary/5 text-xs font-semibold text-primary hover:bg-primary/10"
+              >
+                <Layers className="size-3.5" />
+                <span>{isKitActive ? `Kit (${effectiveKitQty}x)` : "Montar Kit"}</span>
+              </Button>
+            </motion.div>
+
             <CopyButton
               text={anuncioCompleto}
               label="Copiar Tudo"
@@ -345,6 +450,84 @@ export function ProductDashboard({
             </motion.div>
           </div>
         </div>
+
+        {/* Gaveta / Modal de Conversão para Kit */}
+        <AnimatePresence>
+          {showKitModal && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="mt-4 border-t border-border/60 pt-4"
+            >
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Layers className="size-4 text-primary" />
+                    <span className="text-xs font-bold text-foreground uppercase tracking-wider">
+                      Gerenciador de Kit Multi-Unidades
+                    </span>
+                  </div>
+                  <Badge variant="outline" className="text-[10px] font-mono">
+                    Atual: {effectiveKitQty === 1 ? "1 Unidade (Avulso)" : `Kit com ${effectiveKitQty} unidades`}
+                  </Badge>
+                </div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Altere para kit promocional. A IA atualiza automaticamente o título, prompts das fotos em fundo branco (com as unidades agrupadas), quantidade na ficha e SKU!
+                </p>
+
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {[
+                    { qty: 1, label: "1 Unidade (Avulso)" },
+                    { qty: 2, label: "Kit 2x" },
+                    { qty: 3, label: "Kit 3x" },
+                    { qty: 4, label: "Kit 4x" },
+                    { qty: 5, label: "Kit 5x" },
+                    { qty: 6, label: "Kit 6x" },
+                    { qty: 10, label: "Kit 10x" },
+                    { qty: 12, label: "Kit 12x" },
+                  ].map((k) => (
+                    <button
+                      key={k.qty}
+                      type="button"
+                      onClick={() => handleSetKitQuantity(k.qty)}
+                      className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+                        effectiveKitQty === k.qty
+                          ? "bg-primary text-primary-foreground shadow-md"
+                          : "border border-border/70 bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                      }`}
+                    >
+                      {k.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 border-t border-border/40 pt-3">
+                  <span className="text-xs font-medium text-foreground">Quantidade personalizada:</span>
+                  <Input
+                    type="number"
+                    min={2}
+                    max={1000}
+                    placeholder="Ex: 8"
+                    value={customKitInput}
+                    onChange={(e) => setCustomKitInput(e.target.value)}
+                    className="h-8 w-20 rounded-lg text-center font-mono text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const num = parseInt(customKitInput, 10);
+                      if (num >= 1) handleSetKitQuantity(num);
+                    }}
+                    className="h-8 rounded-lg text-xs font-semibold"
+                  >
+                    Aplicar Kit
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* 2. Navegação Segmented Control iOS 18 com Pílula Deslizante */}
@@ -424,9 +607,16 @@ export function ProductDashboard({
             {/* Card de Destaque Mercado Livre */}
             <div className="rounded-2xl border border-border/80 bg-card/90 p-5 shadow-sm">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                  Título Oficial Mercado Livre
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    Título Oficial Mercado Livre
+                  </span>
+                  {isKitActive && (
+                    <Badge className="bg-primary/15 text-primary text-[10px] font-bold">
+                      Kit {effectiveKitQty}x
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex items-center gap-2">
                   <span
                     className={`font-mono text-xs font-bold ${
@@ -595,6 +785,7 @@ export function ProductDashboard({
                     onClick={() => regen("tituloMercadoLivre")}
                     disabled={busy === "tituloMercadoLivre"}
                     className="h-11 rounded-xl px-3"
+                    title="Regenerar título com a IA"
                   >
                     <RefreshCw className={`size-4 ${busy === "tituloMercadoLivre" ? "animate-spin text-primary" : ""}`} />
                   </Button>
@@ -660,9 +851,12 @@ export function ProductDashboard({
                   </span>
                   <CopyButton text={listing.skuPai || listing.sku} />
                 </div>
-                <p className="mt-2 font-mono text-xl font-bold text-foreground">
-                  {listing.skuPai || listing.sku}
-                </p>
+                <input
+                  type="text"
+                  value={listing.skuPai || listing.sku}
+                  onChange={(e) => patch({ skuPai: e.target.value })}
+                  className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-1 font-mono text-xl font-bold text-foreground"
+                />
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   Identifica a linha do produto sem variação final (8 a 16 caracteres).
                 </p>
@@ -675,9 +869,12 @@ export function ProductDashboard({
                   </span>
                   <CopyButton text={listing.skuFilho || listing.sku} />
                 </div>
-                <p className="mt-2 font-mono text-xl font-bold text-primary">
-                  {listing.skuFilho || listing.sku}
-                </p>
+                <input
+                  type="text"
+                  value={listing.skuFilho || listing.sku}
+                  onChange={(e) => patch({ skuFilho: e.target.value })}
+                  className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-1 font-mono text-xl font-bold text-primary"
+                />
                 <p className="mt-1 text-[11px] text-muted-foreground">
                   Herda o SKU Pai acrescido do sufixo de variação com hífen (-).
                 </p>
@@ -935,7 +1132,9 @@ export function ProductDashboard({
                     Galeria de Imagens do Anúncio (Proporção 1:1 Quadrada)
                   </h3>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    Gere fotos profissionais para o catálogo do Mercado Livre ou copie os prompts para usar em IAs externas (Midjourney, DALL-E, Flux, Ideogram).
+                    {isKitActive
+                      ? `Modo Kit Ativo (${effectiveKitQty} Unidades): as fotos do catálogo são geradas exibindo as unidades agrupadas.`
+                      : "Gere fotos profissionais para o catálogo do Mercado Livre ou copie os prompts para usar em IAs externas."}
                   </p>
                 </div>
                 {id?.corAcento && (
@@ -975,6 +1174,11 @@ export function ProductDashboard({
                             >
                               Foto {idx + 1} • {brief.tipo.toUpperCase()}
                             </Badge>
+                            {isKitActive && (
+                              <Badge className="bg-primary/10 text-primary text-[9px] font-bold">
+                                Kit {effectiveKitQty}x
+                              </Badge>
+                            )}
                           </div>
                           <h4 className="mt-1 text-sm font-bold text-foreground">
                             {brief.titulo}

@@ -5,6 +5,7 @@ import type { Listing, ListingSection, ProductInput } from "./types";
 const productInputSchema = z.object({
   photoDataUrl: z.string().min(10),
   basicName: z.string().min(1),
+  kitQuantity: z.number().optional(),
   brand: z.string().optional(),
   ean: z.string().optional(),
   ncm: z.string().optional(),

@@ -13,6 +13,7 @@ export interface Field {
 export interface ProductInput {
   photoDataUrl: string;
   basicName: string;
+  kitQuantity?: number;
   brand?: string;
   ean?: string;
   ncm?: string;
@@ -95,6 +96,7 @@ export interface Listing {
   variacoesSku?: SkuVariacao[];
   nomeInterno: string;
   tituloMercadoLivre: string;
+  kitQuantity?: number;
   ncm?: string;
   ean?: string;
   descricao: string;

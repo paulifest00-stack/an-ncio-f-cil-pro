@@ -83,29 +83,52 @@ function deduplicateWords(text: string): string {
 
 function defaultImagesForProduct(input: ProductInput, name: string): ImageBrief[] {
   const prodName = name || input.basicName || "Produto";
+  const isKit = Boolean(input.kitQuantity && input.kitQuantity > 1);
+  const kitQty = input.kitQuantity || 1;
+
+  const principalPrompt = isKit
+    ? `commercial product photography of a retail kit containing exactly ${kitQty} identical units of ${prodName}, arranged symmetrically and neatly side-by-side on a pure seamless clean white background #FFFFFF, studio lighting, crisp contact shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format`
+    : `commercial product photography of ${prodName}, isolated on a pure seamless clean white background #FFFFFF, studio lighting, soft shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format`;
+
+  const principalObs = isKit
+    ? `Foto Principal do Kit com ${kitQty} unidades agrupadas em Fundo Branco Puro #FFFFFF (Padrão Oficial Mercado Livre)`
+    : "Padrão oficial Mercado Livre para primeira foto de catálogo (Fundo Branco Puro)";
+
+  const objecoesPrompt = isKit
+    ? `commercial advertising infographic banner for Kit with ${kitQty} units of ${prodName}, square 1:1, modern clean vector badges highlighting kit value and pack savings, crisp typography, studio lighting`
+    : `commercial advertising infographic banner for ${prodName}, square 1:1, modern clean vector badges with checkmarks, crisp typography, studio lighting`;
+
+  const detalhesPrompt = isKit
+    ? `macro close-up photography of ${prodName} pack of ${kitQty} units, highlighting premium materials, label typography and packaging finish, soft studio lighting, sharp textures, square 1:1`
+    : `macro close-up photography of ${prodName}, highlighting premium materials, label typography and packaging finish, soft studio lighting, sharp textures, square 1:1`;
+
+  const contextoPrompt = isKit
+    ? `lifestyle commercial photography of the ${kitQty}-unit kit of ${prodName} in real everyday usage scenario, aesthetically pleasing background, warm natural lighting, professional advertising shot, square 1:1`
+    : `lifestyle commercial photography of ${prodName} in real everyday usage scenario, aesthetically pleasing background, warm natural lighting, professional advertising shot, square 1:1`;
+
   return [
     {
       tipo: "principal",
-      titulo: "Foto Principal (Fundo Branco #FFFFFF)",
-      prompt: `commercial product photography of ${prodName}, isolated on a pure seamless clean white background #FFFFFF, studio lighting, soft shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format`,
-      observacoes: "Padrão oficial Mercado Livre para primeira foto de catálogo (Fundo Branco Puro)",
+      titulo: isKit ? `Foto Principal do Kit (${kitQty} Unidades - Fundo Branco)` : "Foto Principal (Fundo Branco #FFFFFF)",
+      prompt: principalPrompt,
+      observacoes: principalObs,
     },
     {
       tipo: "objecoes",
-      titulo: "Arte de Quebra de Objeções (Infográfico)",
-      prompt: `commercial advertising infographic banner for ${prodName}, square 1:1, modern clean vector badges with checkmarks, crisp typography, studio lighting`,
-      observacoes: "Infográfico persuasivo com layout e cores de destaque da embalagem",
+      titulo: isKit ? `Arte de Quebra de Objeções (Kit ${kitQty} Unidades)` : "Arte de Quebra de Objeções (Infográfico)",
+      prompt: objecoesPrompt,
+      observacoes: isKit ? `Infográfico destacando a economia e benefícios do kit de ${kitQty} unidades` : "Infográfico persuasivo com layout e cores de destaque da embalagem",
     },
     {
       tipo: "detalhes",
       titulo: "Foto de Detalhes / Textura / Rótulo",
-      prompt: `macro close-up photography of ${prodName}, highlighting premium materials, label typography and packaging finish, soft studio lighting, sharp textures, square 1:1`,
+      prompt: detalhesPrompt,
       observacoes: "Destaque de qualidade, bico/tampa, textura ou acabamento da embalagem",
     },
     {
       tipo: "contexto",
-      titulo: "Foto em Uso / Ambiente Realista",
-      prompt: `lifestyle commercial photography of ${prodName} in real everyday usage scenario, aesthetically pleasing background, warm natural lighting, professional advertising shot, square 1:1`,
+      titulo: isKit ? `Foto em Uso / Ambiente (Kit ${kitQty} Unidades)` : "Foto em Uso / Ambiente Realista",
+      prompt: contextoPrompt,
       observacoes: "Foto humanizada demonstrando o produto em uso real para gerar conexão emocional",
     },
   ];
@@ -119,6 +142,16 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
   for (const [k, v] of Object.entries(rawFicha)) {
     if (!ficha[k]) ficha[k] = normalizeField(v);
   }
+
+  // Se for kit, garante que a quantidade na ficha técnica reflita o kit
+  if (input.kitQuantity && input.kitQuantity > 1) {
+    ficha["Quantidade"] = {
+      value: `${input.kitQuantity} Unidades (Kit Promocional)`,
+      source: "usuario",
+      note: `Kit com ${input.kitQuantity} unidades`,
+    };
+  }
+
   const kw = raw.palavrasChave ?? {
     principais: [],
     relacionadas: [],
@@ -167,6 +200,7 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
     variacoesSku: raw.variacoesSku ?? [],
     nomeInterno: cleanNomeInterno,
     tituloMercadoLivre: cleanTituloMl,
+    kitQuantity: input.kitQuantity || raw.kitQuantity || 1,
     ncm: ncmValue,
     ean: eanValue,
     descricao: raw.descricao ?? "",

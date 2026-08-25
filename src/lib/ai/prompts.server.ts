@@ -15,22 +15,44 @@ Escreva sempre em português do Brasil.
 `.trim();
 
 export function userDataBlock(input: ProductInput): string {
+  const isKit = Boolean(input.kitQuantity && input.kitQuantity > 1);
+  const kitQty = input.kitQuantity || 1;
+
   const pairs: [string, string | undefined][] = [
     ["Nome básico", input.basicName],
+    ["Formato de Venda", isKit ? `KIT PROMOCIONAL COM ${kitQty} UNIDADES (Multi-pack / Atacado)` : "1 Unidade (Individual / Avulso)"],
+    ["Quantidade no Kit", isKit ? `${kitQty} unidades` : undefined],
     ["Marca", input.brand],
     ["EAN/Código de barras", input.ean],
+    ["NCM", input.ncm],
     ["Categoria", input.category],
     ["Custo", input.cost],
-    ["Peso", input.weight],
+    ["Peso/Volume individual", input.weight],
     ["Dimensões", input.dimensions],
-    ["Quantidade de unidades", input.units],
     ["Embalagem", input.packaging],
     ["Outras informações", input.other],
   ];
-  return pairs
+
+  const formatted = pairs
     .filter(([, v]) => v && v.trim())
     .map(([k, v]) => `- ${k}: ${v!.trim()}`)
     .join("\n");
+
+  if (isKit) {
+    return [
+      formatted,
+      "",
+      `>>> DIRETRIZES OBRIGATÓRIAS PARA ANÚNCIO DE KIT COM ${kitQty} UNIDADES:`,
+      `- TÍTULO MERCADO LIVRE: Deve destacar o kit no início de forma persuasiva (ex: "Kit ${kitQty} [Nome Produto] [Especificação]", max 60 chars, sem redundâncias).`,
+      `- NOME INTERNO BLING: Estruturar como "Kit ${kitQty}x [Nome Produto] [Volume/Tamanho]".`,
+      `- SKU: O SKU deve indicar a quantidade do kit de ${kitQty} unidades (ex: no bloco de quantidade usar K0${kitQty} ou ${kitQty}UN, ex: POPTPC150K0${kitQty}).`,
+      `- FICHA TÉCNICA: Campo "Quantidade" deve ser obrigatoriamente "${kitQty} Unidades (Kit Promocional)".`,
+      `- DESCRIÇÃO: Na seção CONTEÚDO DA EMBALAGEM, listar claramente "0${kitQty}x Unidades de [Nome do Produto]" e destacar no texto os benefícios de comprar o kit (economia, estoque, melhor custo por unidade).`,
+      `- FOTO PRINCIPAL: A Foto 1 deve descrever no prompt exatamente ${kitQty} unidades idênticas do produto exibidas juntas com harmonia sobre fundo branco puro #FFFFFF.`,
+    ].join("\n");
+  }
+
+  return formatted;
 }
 
 export const REGRAS_SKU = `
@@ -45,12 +67,15 @@ O SKU Pai identifica a família do produto sem a variação final.
 - Ordem 1 (Marca/Fornecedor): 2 a 3 letras (Ex: POP = Popper, BP = Bompack, GM = Gour Max, PP = Pic Pic)
 - Ordem 2 (Tipo/Categoria): 3 a 6 letras (Ex: TPC = Tinta Pinta Cabelo, LUVNIT = Luva Nitrílica, POTRET = Pote Retangular)
 - Ordem 3 (Atributo Fixo - Opcional): 2 a 4 caracteres (Ex: PR = Preta, FLUO = Fluorescente)
-- Ordem 4 (Embalagem/Medida Base): 2 a 4 caracteres (Ex: 150 = 150ml, 100 = 100un, 24 = 24un, 1UN = 1 unidade)
+- Ordem 4 (Embalagem/Medida Base ou Qtd do Kit): 2 a 5 caracteres (Ex: 150 = 150ml, 100 = 100un, 24 = 24un, 1UN = 1 unidade, K02 = Kit 2un, K03 = Kit 3un, K05 = Kit 5un, K10 = Kit 10un)
 
 Exemplos de SKU Pai:
 - POPTPC150 (Popper + Tinta Pinta Cabelo + 150ml)
+- POPTPC150K03 (Kit 3 Unidades: Popper + Tinta Pinta Cabelo + 150ml + Kit 3)
 - BPLUVNITPR100 (Bompack + Luva Nitrílica + Preta + 100un)
+- BPLUVNITPR100K02 (Kit 2 Caixas de 100un)
 - GMPOTRET24 (Gour Max + Pote Retangular + 24un)
+- GMPOTRET24K05 (Kit 5 Pacotes de 24un)
 
 3. COMPONENTES DO SKU FILHO (VARIAÇÕES):
 O SKU Filho herda o SKU Pai e recebe '-' + código da variação.

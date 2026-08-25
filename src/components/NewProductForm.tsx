@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   ChevronDown,
   Info,
+  Layers,
   Loader2,
   PackagePlus,
   Sparkles,
@@ -49,6 +50,9 @@ export function NewProductForm({
 }) {
   const [photo, setPhoto] = useState<string | null>(null);
   const [basicName, setBasicName] = useState("");
+  const [kitQuantity, setKitQuantity] = useState<number>(1);
+  const [isCustomKit, setIsCustomKit] = useState(false);
+  const [customKitVal, setCustomKitVal] = useState("");
   const [showOptional, setShowOptional] = useState(false);
   const [optional, setOptional] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -90,13 +94,18 @@ export function NewProductForm({
         // Guarda a identificação para reutilizar na geração completa sem repetir a etapa
         if (res.identificacao) {
           setCachedIdentificacao(res.identificacao);
-        }
+          const foundItems = [
+            res.identificacao.marca && `Marca: ${res.identificacao.marca}`,
+            res.identificacao.volume && `Volume: ${res.identificacao.volume}`,
+            res.identificacao.linha && `Linha: ${res.identificacao.linha}`,
+          ].filter(Boolean);
 
-        if (autoName || brand) {
           setScanSuccessMsg(
-            `Produto identificado: ${autoName || "Item lido"} ${brand ? `(Marca: ${brand})` : ""}`,
+            foundItems.length > 0
+              ? `Foto identificada com sucesso (${foundItems.join(" • ")})`
+              : "Foto lida e campos preenchidos pela IA.",
           );
-          // Se encontrou dados extras, abre a sanfona de opcionais para o usuário conferir
+
           if (brand || weight || category || ean) {
             setShowOptional(true);
           }
@@ -141,6 +150,10 @@ export function NewProductForm({
     setCachedIdentificacao(null);
   };
 
+  const currentEffectiveKitQty = isCustomKit
+    ? Math.max(1, parseInt(customKitVal || "1", 10))
+    : kitQuantity;
+
   const submit = () => {
     if (!photo) return setError("Envie uma foto da embalagem ou produto.");
     if (!basicName.trim())
@@ -149,6 +162,7 @@ export function NewProductForm({
     onSubmit({
       photoDataUrl: photo,
       basicName: basicName.trim(),
+      kitQuantity: currentEffectiveKitQty,
       ...optional,
       ...(cachedIdentificacao ? { cachedIdentificacao } : {}),
     });
@@ -331,7 +345,111 @@ export function NewProductForm({
             </div>
           </div>
 
-          {/* Campo 3: Opcionais Sanfonados no estilo iOS */}
+          {/* Campo 3: Formato de Venda & Montagem de Kits */}
+          <div className="rounded-2xl border border-border/80 bg-muted/20 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="size-4 text-primary" />
+                <Label className="text-xs font-semibold uppercase tracking-wider text-foreground">
+                  3. Formato de Venda (Avulso ou Kit)
+                </Label>
+              </div>
+              <Badge
+                variant={currentEffectiveKitQty > 1 ? "default" : "secondary"}
+                className={`text-[10px] font-bold ${
+                  currentEffectiveKitQty > 1
+                    ? "bg-primary text-primary-foreground"
+                    : ""
+                }`}
+              >
+                {currentEffectiveKitQty > 1
+                  ? `Kit Promocional ${currentEffectiveKitQty}x Unidades`
+                  : "1 Unidade (Avulso)"}
+              </Badge>
+            </div>
+
+            <p className="mt-1 text-xs text-muted-foreground">
+              Envie a foto de apenas 1 unidade. A IA multiplica automaticamente no título, fotos em fundo branco, descrição e SKU do kit!
+            </p>
+
+            {/* Pílulas de Seleção Rápida */}
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {[
+                { qty: 1, label: "1 Unidade" },
+                { qty: 2, label: "Kit 2x" },
+                { qty: 3, label: "Kit 3x" },
+                { qty: 4, label: "Kit 4x" },
+                { qty: 5, label: "Kit 5x" },
+                { qty: 6, label: "Kit 6x" },
+                { qty: 10, label: "Kit 10x" },
+                { qty: 12, label: "Kit 12x" },
+              ].map((k) => {
+                const isSelected = !isCustomKit && kitQuantity === k.qty;
+                return (
+                  <button
+                    key={k.qty}
+                    type="button"
+                    onClick={() => {
+                      setIsCustomKit(false);
+                      setKitQuantity(k.qty);
+                    }}
+                    className={`relative rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+                      isSelected
+                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                        : "border border-border/70 bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                    }`}
+                  >
+                    {k.label}
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCustomKit(true);
+                  if (!customKitVal) setCustomKitVal("8");
+                }}
+                className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
+                  isCustomKit
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
+                    : "border border-border/70 bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                }`}
+              >
+                Personalizado...
+              </button>
+            </div>
+
+            {/* Input para Quantidade Personalizada de Kit */}
+            <AnimatePresence>
+              {isCustomKit && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="mt-3 flex items-center gap-3 overflow-hidden rounded-xl border border-primary/30 bg-primary/5 p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium text-foreground">
+                      Quantidade exata no Kit:
+                    </span>
+                    <Input
+                      type="number"
+                      min={2}
+                      max={1000}
+                      value={customKitVal}
+                      onChange={(e) => setCustomKitVal(e.target.value)}
+                      placeholder="Ex: 8, 20, 24..."
+                      className="h-8 w-24 rounded-lg bg-background text-center font-mono text-xs font-bold"
+                    />
+                    <span className="text-xs text-muted-foreground">unidades</span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Campo 4: Opcionais Sanfonados no estilo iOS */}
           <div className="overflow-hidden rounded-2xl border border-border/70 bg-muted/20">
             <button
               type="button"
