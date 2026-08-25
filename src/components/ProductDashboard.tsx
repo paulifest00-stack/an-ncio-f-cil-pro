@@ -50,6 +50,7 @@ import { NAO_IDENTIFICADO } from "@/lib/ai/types";
 import {
   generateAdImage,
   regenerateSection,
+  convertToKitServer,
 } from "@/lib/ai/product.functions";
 import { registerUsage } from "@/lib/usage";
 import { formatEan13, generateValidEan13, validateEan13 } from "@/lib/ean";
@@ -139,7 +140,13 @@ export function ProductDashboard({
   >({});
   const [expandedPrompt, setExpandedPrompt] = useState<Record<number, boolean>>({});
   const [showKitModal, setShowKitModal] = useState(false);
+  const [isConvertingKit, setIsConvertingKit] = useState(false);
   const [customKitInput, setCustomKitInput] = useState("");
+  const [kitNotice, setKitNotice] = useState<{
+    qty: number;
+    isKit: boolean;
+    ean: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Inicializa o estado das imagens com base no que já foi salvo anteriormente
@@ -236,84 +243,34 @@ export function ProductDashboard({
     patch({ variacoesSku: updatedVars });
   };
 
-  // Transforma o anúncio existente em Kit ou altera a quantidade
-  const handleSetKitQuantity = (newQty: number) => {
-    const isKit = newQty > 1;
-    const prodName = listing.nomeInterno || input.basicName || "Produto";
-    
-    // Atualiza ficha técnica
-    const updatedFicha = { ...listing.fichaTecnica };
-    if (isKit) {
-      updatedFicha["Quantidade"] = {
-        value: `${newQty} Unidades (Kit Promocional)`,
-        source: "usuario",
-        note: `Kit com ${newQty} unidades`,
-      };
-    } else {
-      updatedFicha["Quantidade"] = {
-        value: "1 Unidade",
-        source: "usuario",
-      };
+  // Transforma o anúncio existente em Kit ou altera a quantidade chamando a IA no servidor
+  const handleSetKitQuantity = async (newQty: number) => {
+    setIsConvertingKit(true);
+    setError(null);
+    try {
+      const res = await convertToKitServer({
+        data: {
+          targetKitQuantity: newQty,
+          input: { ...input, kitQuantity: newQty },
+          listing,
+        },
+      });
+      registerUsage("texto");
+      input.kitQuantity = newQty;
+      patch(res as Listing);
+
+      setKitNotice({
+        qty: newQty,
+        isKit: newQty > 1,
+        ean: res.ean || generateValidEan13("789"),
+      });
+      setShowKitModal(false);
+    } catch (err) {
+      console.error("Erro ao converter para kit:", err);
+      setError("Não foi possível converter automaticamente. Tente novamente.");
+    } finally {
+      setIsConvertingKit(false);
     }
-
-    // Atualiza prompts de imagens para o novo formato de kit
-    const updatedImagens = listing.imagens.map((img) => {
-      if (img.tipo === "principal") {
-        return {
-          ...img,
-          titulo: isKit ? `Foto Principal do Kit (${newQty} Unidades - Fundo Branco)` : "Foto Principal (Fundo Branco #FFFFFF)",
-          prompt: isKit
-            ? `commercial product photography of a retail kit containing exactly ${newQty} identical units of ${prodName}, arranged symmetrically side-by-side on a pure seamless clean white background #FFFFFF, studio lighting, crisp contact shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format`
-            : `commercial product photography of ${prodName}, isolated on a pure seamless clean white background #FFFFFF, studio lighting, soft shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format`,
-          observacoes: isKit ? `Foto Principal do Kit com ${newQty} unidades agrupadas em Fundo Branco Puro #FFFFFF` : "Padrão oficial Mercado Livre para primeira foto de catálogo (Fundo Branco Puro)",
-        };
-      }
-      if (img.tipo === "objecoes") {
-        return {
-          ...img,
-          titulo: isKit ? `Arte de Quebra de Objeções (Kit ${newQty} Unidades)` : "Arte de Quebra de Objeções (Infográfico)",
-          prompt: isKit
-            ? `commercial advertising infographic banner for Kit with ${newQty} units of ${prodName}, square 1:1, modern clean vector badges highlighting kit value and pack savings, crisp typography, studio lighting`
-            : img.prompt,
-        };
-      }
-      if (img.tipo === "contexto") {
-        return {
-          ...img,
-          titulo: isKit ? `Foto em Uso / Ambiente (Kit ${newQty} Unidades)` : "Foto em Uso / Ambiente Realista",
-          prompt: isKit
-            ? `lifestyle commercial photography of the ${newQty}-unit kit of ${prodName} in real everyday usage scenario, aesthetically pleasing background, warm natural lighting, professional advertising shot, square 1:1`
-            : img.prompt,
-        };
-      }
-      return img;
-    });
-
-    // Ajusta o título se for virar kit
-    let newTitle = listing.tituloMercadoLivre;
-    if (isKit && !newTitle.toLowerCase().includes("kit")) {
-      const cleanBase = newTitle.replace(/^kit\s*\d*x?\s*/i, "").trim();
-      newTitle = `Kit ${newQty} ${cleanBase}`.slice(0, 60);
-    } else if (!isKit) {
-      newTitle = newTitle.replace(/^kit\s*\d*x?\s*/i, "").trim();
-    }
-
-    // Ajusta SKU se for virar kit
-    let newSkuPai = listing.skuPai || listing.sku;
-    if (isKit && !newSkuPai.includes(`K0${newQty}`) && !newSkuPai.includes(`K${newQty}`)) {
-      newSkuPai = `${newSkuPai}K0${newQty}`.slice(0, 16);
-    }
-
-    input.kitQuantity = newQty;
-    patch({
-      kitQuantity: newQty,
-      tituloMercadoLivre: newTitle,
-      skuPai: newSkuPai,
-      sku: newSkuPai,
-      fichaTecnica: updatedFicha,
-      imagens: updatedImagens,
-    });
-    setShowKitModal(false);
   };
 
   const id = listing.identificacao;
@@ -424,9 +381,14 @@ export function ProductDashboard({
                 variant="outline"
                 size="sm"
                 onClick={() => setShowKitModal(!showKitModal)}
+                disabled={isConvertingKit}
                 className="h-8 gap-1.5 rounded-xl border-primary/40 bg-primary/5 text-xs font-semibold text-primary hover:bg-primary/10"
               >
-                <Layers className="size-3.5" />
+                {isConvertingKit ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Layers className="size-3.5" />
+                )}
                 <span>{isKitActive ? `Kit (${effectiveKitQty}x)` : "Montar Kit"}</span>
               </Button>
             </motion.div>
@@ -473,8 +435,15 @@ export function ProductDashboard({
                   </Badge>
                 </div>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Altere para kit promocional. A IA atualiza automaticamente o título, prompts das fotos em fundo branco (com as unidades agrupadas), quantidade na ficha e SKU!
+                  Selecione a quantidade do kit. A IA recalcula automaticamente o anúncio todo: gera novo EAN-13 exclusivo do kit, reescreve a descrição e atualiza o agrupamento das fotos em fundo branco!
                 </p>
+
+                {isConvertingKit && (
+                  <div className="my-3 flex items-center gap-2 rounded-xl bg-primary/10 p-3 text-xs font-semibold text-primary">
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>Recalculando e adaptando todo o anúncio para o Kit...</span>
+                  </div>
+                )}
 
                 <div className="mt-3 flex flex-wrap gap-1.5">
                   {[
@@ -490,6 +459,7 @@ export function ProductDashboard({
                     <button
                       key={k.qty}
                       type="button"
+                      disabled={isConvertingKit}
                       onClick={() => handleSetKitQuantity(k.qty)}
                       className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
                         effectiveKitQty === k.qty
@@ -510,18 +480,20 @@ export function ProductDashboard({
                     max={1000}
                     placeholder="Ex: 8"
                     value={customKitInput}
+                    disabled={isConvertingKit}
                     onChange={(e) => setCustomKitInput(e.target.value)}
                     className="h-8 w-20 rounded-lg text-center font-mono text-xs"
                   />
                   <Button
                     size="sm"
+                    disabled={isConvertingKit}
                     onClick={() => {
                       const num = parseInt(customKitInput, 10);
-                      if (num >= 1) handleSetKitQuantity(num);
+                      if (num >= 1) void handleSetKitQuantity(num);
                     }}
                     className="h-8 rounded-lg text-xs font-semibold"
                   >
-                    Aplicar Kit
+                    {isConvertingKit ? <Loader2 className="size-3.5 animate-spin" /> : "Aplicar Kit"}
                   </Button>
                 </div>
               </div>
@@ -529,6 +501,53 @@ export function ProductDashboard({
           )}
         </AnimatePresence>
       </div>
+
+      {/* Banner Visual de Confirmação de Conversão de Kit */}
+      <AnimatePresence>
+        {kitNotice && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98, y: -6 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            className="overflow-hidden rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-950 dark:text-emerald-100 shadow-sm"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white shadow-sm">
+                  <ShieldCheck className="size-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                    {kitNotice.isKit
+                      ? `Anúncio adaptado para Kit com ${kitNotice.qty} Unidades!`
+                      : "Anúncio adaptado para 1 Unidade Avulsa!"}
+                  </h4>
+                  <div className="mt-1 space-y-1 text-xs text-emerald-900/90 dark:text-emerald-200">
+                    <p>
+                      ✓ <strong>Novo Código EAN-13 Exclusivo</strong>:{" "}
+                      <span className="font-mono font-bold">{kitNotice.ean}</span>{" "}
+                      <em className="text-[11px] opacity-80">(Kits necessitam de código de barras próprio diferente do item avulso)</em>
+                    </p>
+                    <p>
+                      ✓ <strong>Título, Descrição e Conteúdo da Embalagem</strong> atualizados com a quantidade exata.
+                    </p>
+                    <p>
+                      ✓ <strong>Fotos do Anúncio</strong>: Foto 1 agrupando as {kitNotice.qty} unidades em fundo branco #FFFFFF e Foto 2 mantendo 100% da quebra de objeções técnicas!
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setKitNotice(null)}
+                className="rounded-lg p-1 text-emerald-800/60 hover:bg-emerald-500/20 hover:text-emerald-950 dark:text-emerald-300"
+              >
+                ✕
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 2. Navegação Segmented Control iOS 18 com Pílula Deslizante */}
       <div className="no-scrollbar flex w-full overflow-x-auto rounded-2xl border border-border/80 bg-muted/50 p-1.5 backdrop-blur-xl">

@@ -71,3 +71,23 @@ export const generateAdImage = createServerFn({ method: "POST" })
     return renderAdImage(data.prompt, data.photoDataUrl);
   });
 
+export const convertToKitServer = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        targetKitQuantity: z.number().min(1),
+        input: productInputSchema,
+        listing: z.any(),
+      })
+      .parse(data),
+  )
+  .handler(async ({ data }) => {
+    const { transformListingToKit } = await import("./listing.server");
+    return transformListingToKit(
+      data.targetKitQuantity,
+      data.input as ProductInput,
+      data.listing as Listing,
+    );
+  });
+
+

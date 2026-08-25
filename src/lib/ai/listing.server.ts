@@ -12,6 +12,7 @@ import {
   photoImagePrompt,
   userDataBlock,
 } from "./prompts.server";
+import { generateValidEan13 } from "../ean";
 import {
   NAO_IDENTIFICADO,
   type Field,
@@ -631,4 +632,125 @@ export async function renderAdImage(
   const isInfographic = prompt.includes("infographic image") || prompt.includes("RULES FOR ALL LAYOUTS");
   const finalPrompt = isInfographic ? prompt : photoImagePrompt(prompt);
   return generateImage(finalPrompt, photoDataUrl);
+}
+
+export async function transformListingToKit(
+  targetKitQuantity: number,
+  input: ProductInput,
+  currentListing: Listing,
+): Promise<Listing> {
+  const updatedInput: ProductInput = {
+    ...input,
+    kitQuantity: targetKitQuantity,
+  };
+
+  const isKit = targetKitQuantity > 1;
+  const newEan = generateValidEan13("789");
+
+  const promptMessages: ChatMessage[] = [
+    {
+      role: "system",
+      content: `Você é um especialista em converter e criar anúncios de alta conversão para Mercado Livre e Bling no formato Kit Multi-Unidades.\n${REGRA_OURO}\n${REGRAS_SKU}`,
+    },
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: [
+            `Converta o anúncio atual para o formato ${isKit ? `KIT COM ${targetKitQuantity} UNIDADES` : "1 UNIDADE (AVULSO)"}.`,
+            "",
+            "DIRETRIZES CRÍTICAS PARA ESSA CONVERSÃO:",
+            isKit
+              ? `- TÍTULO MERCADO LIVRE: Deve começar com "Kit ${targetKitQuantity} [Produto]...", ser persuasivo, objetivo e ter no MÁXIMO 60 caracteres (sem palavras repetidas).`
+              : `- TÍTULO MERCADO LIVRE: Título para 1 unidade avulsa, máx 60 caracteres.`,
+            isKit
+              ? `- SKU PAI: Identifica a linha familiar + kit (ex: GMPOTRET24K0${targetKitQuantity} ou POPTPC150K0${targetKitQuantity}). NUNCA coloque a variação (ex: 750ml) no SKU Pai!`
+              : `- SKU PAI: Base familiar sem sufixo de kit (ex: GMPOTRET24).`,
+            `- SKU FILHO: Herda o SKU Pai e adiciona a variação com hífen (ex: GMPOTRET24K0${targetKitQuantity}-750 ou POPTPC150K0${targetKitQuantity}-AZ).`,
+            `- VARIAÇÕES DE SKU: Liste a variação atual e sugira as variações irmãs da família com seus respectivos SKUs filhos adaptados para o Kit.`,
+            isKit
+              ? `- DESCRIÇÃO: Na seção CONTEÚDO DA EMBALAGEM, liste "0${targetKitQuantity}x Unidades/Pacotes de [Nome do Produto]" e explique no texto as vantagens da compra em kit (economia, custo por unidade, frete único).`
+              : `- DESCRIÇÃO: Ajuste para 1 unidade avulsa.`,
+            `- FICHA TÉCNICA: Campo "Quantidade" deve ser "${targetKitQuantity} Unidades ${isKit ? "(Kit Promocional)" : ""}".`,
+            "",
+            "Anúncio atual de referência:",
+            listingContext(currentListing),
+            "",
+            "Dados do usuário:",
+            userDataBlock(updatedInput) || "- (somente foto e nome básico)",
+            "",
+            SCHEMA,
+          ].join("\n"),
+        },
+        { type: "image_url", image_url: { url: input.photoDataUrl } },
+      ],
+    },
+  ];
+
+  let raw: Partial<Listing>;
+  try {
+    raw = await chatJson<Partial<Listing>>(promptMessages);
+  } catch (err) {
+    console.error("Erro ao converter anúncio para kit via IA, aplicando transformação determinística:", err);
+    raw = {
+      tituloMercadoLivre: isKit
+        ? `Kit ${targetKitQuantity} ${currentListing.tituloMercadoLivre.replace(/^kit\s*\d*x?\s*/i, "").trim()}`.slice(0, 60)
+        : currentListing.tituloMercadoLivre.replace(/^kit\s*\d*x?\s*/i, "").trim(),
+      nomeInterno: isKit
+        ? `Kit ${targetKitQuantity}x ${currentListing.nomeInterno.replace(/^kit\s*\d*x?\s*/i, "").trim()}`
+        : currentListing.nomeInterno.replace(/^kit\s*\d*x?\s*/i, "").trim(),
+      descricao: currentListing.descricao,
+      fichaTecnica: currentListing.fichaTecnica,
+    };
+  }
+
+  const updatedListing = normalize(raw, updatedInput);
+  updatedListing.ean = newEan;
+  if (updatedListing.fichaTecnica["EAN"]) {
+    updatedListing.fichaTecnica["EAN"].value = newEan;
+  }
+  updatedListing.identificacao = currentListing.identificacao;
+  updatedListing.referencias = currentListing.referencias;
+
+  // Garante que as variações também recebam novos EANs válidos se não tiverem
+  if (updatedListing.variacoesSku && updatedListing.variacoesSku.length > 0) {
+    updatedListing.variacoesSku = updatedListing.variacoesSku.map((v) => ({
+      ...v,
+      ean: generateValidEan13("789"),
+    }));
+  }
+
+  // Preserva o plano do infográfico de quebra de objeções sem perder os pontos técnicos reais
+  const existingObj = currentListing.imagens.find((i) => i.tipo === "objecoes");
+  const plan = existingObj?.plano || (currentListing.identificacao ? {
+    proporcao: currentListing.identificacao?.proporcao || 1.0,
+    layout: currentListing.identificacao?.layout || "C",
+    corAcento: currentListing.identificacao?.corAcento || "#141414",
+    titulo: {
+      linha1: isKit ? `KIT COM ${targetKitQuantity} UNIDADES` : (currentListing.identificacao?.produto || "PRODUTO"),
+      linha2: currentListing.identificacao?.linha || currentListing.identificacao?.marca || "ORIGINAL",
+      linha3: currentListing.identificacao?.volume || "PRONTA ENTREGA",
+    },
+    pontos: existingObj?.plano?.pontos || [
+      { texto: "PRODUTO 100% ORIGINAL", icone: "shield", fonte: "rótulo" },
+      { texto: "ALTA QUALIDADE E DURABILIDADE", icone: "star", fonte: "rótulo" },
+      { texto: "ENVIO RÁPIDO E SEGURO", icone: "box", fonte: "usuário" },
+      { texto: "PRONTO PARA USO", icone: "check", fonte: "rótulo" },
+    ],
+    naoConfirmado: [],
+  } : undefined);
+
+  if (plan) {
+    const objPrompt = objectionImagePrompt(plan as ImagePlan);
+    let targetObjImg = updatedListing.imagens.find((i) => i.tipo === "objecoes");
+    if (targetObjImg) {
+      targetObjImg.prompt = objPrompt;
+      targetObjImg.plano = plan as ImagePlan;
+      targetObjImg.titulo = isKit ? `Arte de Quebra de Objeções (Kit ${targetKitQuantity} Unidades)` : "Arte de Quebra de Objeções (Infográfico)";
+      targetObjImg.observacoes = `Infográfico persuasivo com pontos técnicos e layout ${plan.layout}`;
+    }
+  }
+
+  return updatedListing;
 }

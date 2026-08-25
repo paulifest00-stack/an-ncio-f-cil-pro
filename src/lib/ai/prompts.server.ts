@@ -62,46 +62,44 @@ O SKU é formado pela Aglutinação do Bloco Base (SKU Pai) seguido de um Sufixo
 [MARCA][CATEGORIA/PRODUTO][ESPECIFICACAO_FIXA][QTD_BASE] - [VARIACAO]
 |<--------------------- SKU PAI --------------------->| |<-- SKU FILHO -->|
 
-2. COMPONENTES DO SKU PAI (BASE AGLUTINADA):
-O SKU Pai identifica a família do produto sem a variação final.
+2. COMPONENTES DO SKU PAI (BASE DA FAMÍLIA):
+O SKU Pai identifica a família do produto SEM o atributo que varia (cor, tamanho, volume ou sabor).
 - Ordem 1 (Marca/Fornecedor): 2 a 3 letras (Ex: POP = Popper, BP = Bompack, GM = Gour Max, PP = Pic Pic)
 - Ordem 2 (Tipo/Categoria): 3 a 6 letras (Ex: TPC = Tinta Pinta Cabelo, LUVNIT = Luva Nitrílica, POTRET = Pote Retangular)
 - Ordem 3 (Atributo Fixo - Opcional): 2 a 4 caracteres (Ex: PR = Preta, FLUO = Fluorescente)
-- Ordem 4 (Embalagem/Medida Base ou Qtd do Kit): 2 a 5 caracteres (Ex: 150 = 150ml, 100 = 100un, 24 = 24un, 1UN = 1 unidade, K02 = Kit 2un, K03 = Kit 3un, K05 = Kit 5un, K10 = Kit 10un)
+- Ordem 4 (Embalagem/Qtd Base ou Kit): 2 a 5 caracteres (Ex: 150 = 150ml quando fixo, 100 = 100un, 24 = 24un, K02 = Kit 2un, K03 = Kit 3un, K05 = Kit 5un)
+
+REGRA DE OURO SKU PAI VS SKU FILHO:
+- Se o produto varia em volume/capacidade (ex: Pote Retangular 250ml, 500ml, 750ml, 1000ml), o SKU Pai é a BASE FAMILIAR (ex: GMPOTRET24) e o volume entra EXCLUSIVAMENTE no SKU Filho (ex: GMPOTRET24-750). NUNCA coloque 750 no SKU Pai de potes!
+- Se o produto varia em cor (ex: Tinta Spray Azul, Rosa, Vermelha), o SKU Pai é POPTPC150 e a cor entra no SKU Filho (POPTPC150-AZ).
+- Se o produto varia em tamanho (ex: Luva P, M, G), o SKU Pai é BPLUVNITPR100 e o tamanho entra no SKU Filho (BPLUVNITPR100-M).
+- No campo "variacoesSku", você DEVE SEMPRE listar a variação ativa e sugerir as variações irmãs daquela linha (ex: para potes plásticos sugerir 250ml, 500ml, 750ml, 1000ml com seus respectivos SKUs filhos e campos EAN).
 
 Exemplos de SKU Pai:
 - POPTPC150 (Popper + Tinta Pinta Cabelo + 150ml)
-- POPTPC150K03 (Kit 3 Unidades: Popper + Tinta Pinta Cabelo + 150ml + Kit 3)
+- POPTPC150K03 (Kit 3 Unidades da Tinta Spray Popper)
 - BPLUVNITPR100 (Bompack + Luva Nitrílica + Preta + 100un)
-- BPLUVNITPR100K02 (Kit 2 Caixas de 100un)
-- GMPOTRET24 (Gour Max + Pote Retangular + 24un)
-- GMPOTRET24K05 (Kit 5 Pacotes de 24un)
+- BPLUVNITPR100K02 (Kit 2 Caixas de Luva Nitrílica)
+- GMPOTRET24 (Gour Max + Pote Retangular + 24un - SEM o volume de 750ml)
+- GMPOTRET24K03 (Kit 3 Pacotes de Pote Retangular Gour Max)
 
 3. COMPONENTES DO SKU FILHO (VARIAÇÕES):
 O SKU Filho herda o SKU Pai e recebe '-' + código da variação.
-Tipos Comuns:
-- Cores: -AZ (Azul), -VM (Vermelho), -AM (Amarelo), -PR (Preto), -BR (Branco), -RS (Rosa)
-- Tamanhos Vestuário/Luvas: -P, -M, -G, -GG
-- Capacidades/Volumes: -250 (250ml), -500 (500ml), -750 (750ml), -1000 (1000ml)
-- Polegadas/Balões: -5POL, -9POL, -12POL, -18POL
-
-4. EXEMPLOS PRÁTICOS:
-- Spray Pinta Cabelo Popper 150ml:
-  * SKU Pai: POPTPC150
-  * Variação Azul: POPTPC150-AZ
-  * Variação Rosa: POPTPC150-RS
-- Luva Nitrílica Bompack Preta 100un:
-  * SKU Pai: BPLUVNITPR100
+Exemplos Práticos:
+- Pote Retangular Gour Max c/ 24un (Pai: GMPOTRET24):
+  * 250 ml: GMPOTRET24-250
+  * 500 ml: GMPOTRET24-500
+  * 750 ml: GMPOTRET24-750
+  * 1000 ml: GMPOTRET24-1000
+- Spray Pinta Cabelo Popper 150ml (Pai: POPTPC150):
+  * Azul: POPTPC150-AZ
+  * Rosa: POPTPC150-RS
+- Luva Nitrílica Bompack 100un (Pai: BPLUVNITPR100):
   * Tam P: BPLUVNITPR100-P
   * Tam M: BPLUVNITPR100-M
   * Tam G: BPLUVNITPR100-G
-- Pote Retangular Gour Max c/ 24un:
-  * SKU Pai: GMPOTRET24
-  * 250 ml: GMPOTRET24-250
-  * 500 ml: GMPOTRET24-500
-  * 1000 ml: GMPOTRET24-1000
 
-5. REGRAS DE FORMATAÇÃO:
+4. REGRAS DE FORMATAÇÃO:
 - Somente letras maiúsculas (sem acentos ou caracteres especiais).
 - Permitidos apenas A-Z, 0-9 e o separador hífen (-).
 - Sem espaços em branco.
