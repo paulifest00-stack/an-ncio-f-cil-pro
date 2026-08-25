@@ -49,12 +49,9 @@ function Index() {
       const result = await generateListing({ data });
       registerUsage("texto");
       const generated = result as Listing;
-      if (!generated.id) {
-        generated.id = crypto.randomUUID();
-      }
       setListing(generated);
-      // Salva no histórico local e no Supabase Cloud automaticamente como novo anúncio
-      saveProductToHistory(data, generated, { isNewListing: true });
+      // Salva no histórico local e no Supabase Cloud automaticamente
+      saveProductToHistory(data, generated);
       setStage("result");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao gerar o anúncio.");

@@ -177,7 +177,11 @@ Responda SOMENTE com JSON válido neste formato:
   "ncm": "código fiscal NCM exato com 8 dígitos formatado como 0000.00.00 (pesquise a classificação fiscal oficial do Mercosul baseada na categoria e composição do produto)",
   "ean": "código de barras EAN-13 (13 dígitos numéricos) se visível no produto ou informado pelo usuário",
   "descricao": "descrição comercial profissional de alta conversão estruturada em seções claras (APRESENTAÇÃO DO PRODUTO, PRINCIPAIS CARACTERÍSTICAS E BENEFÍCIOS, ESPECIFICAÇÕES TÉCNICAS, CONTEÚDO DA EMBALAGEM, MODO DE USO / CUIDADOS, PERGUNTAS FREQUENTES) apenas com dados reais confirmados. Sem emojis exagerados, sem promessas falsas, texto fluido e profissional em português do Brasil.",
-  "palavrasChave": { "principais": [], "relacionadas": [], "variacoes": [] },
+  "palavrasChave": {
+    "principais": ["termos exatos de maior volume de busca no Mercado Livre para este produto"],
+    "relacionadas": ["termos de cauda longa, sinônimos comerciais e atributos mais pesquisados por compradores"],
+    "variacoes": ["variações de busca com intenção de compra, nomes alternativos populares e categorias"]
+  },
   "fichaTecnica": {
     "Produto": { "value": "", "source": "usuario|imagem|pesquisa|nao_encontrado", "note": "opcional" },
     "Marca": {...}, "Modelo": {...}, "Categoria": {...}, "NCM": { "value": "código NCM 0000.00.00", "source": "pesquisa", "note": "Classificação fiscal Mercosul" }, "EAN": {...}, "Peso": {...}, "Dimensões": {...},

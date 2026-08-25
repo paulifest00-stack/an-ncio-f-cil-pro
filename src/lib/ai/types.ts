@@ -90,7 +90,6 @@ export interface SkuVariacao {
 }
 
 export interface Listing {
-  id?: string;
   sku: string;
   skuPai?: string;
   skuFilho?: string;
