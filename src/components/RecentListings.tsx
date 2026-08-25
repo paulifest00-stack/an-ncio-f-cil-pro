@@ -50,33 +50,57 @@ export function getSavedProducts(): SavedProduct[] {
   return [];
 }
 
-export function saveProductToHistory(input: ProductInput, listing: Listing) {
+export function saveProductToHistory(
+  input: ProductInput,
+  listing: Listing,
+  options?: { isNewListing?: boolean },
+) {
   if (typeof window === "undefined") return;
 
-  // 1. Salva localmente de forma imediata
+  // Garante que o anúncio tem um ID persistente
+  if (!listing.id || options?.isNewListing) {
+    listing.id = crypto.randomUUID();
+  }
+  const targetId = listing.id;
+
+  // 1. Salva localmente de forma imediata (Edição in-place do mesmo anúncio)
   try {
     const items = getSavedProducts();
     const existingIdx = items.findIndex(
-      (i) => i.input.basicName === input.basicName && i.listing.sku === listing.sku,
+      (i) => i.id === targetId || i.listing.id === targetId,
     );
-    const newItem: SavedProduct = {
-      id: crypto.randomUUID(),
-      createdAt: Date.now(),
-      input,
-      listing,
-      isCloud: true,
-    };
-    let updated = [newItem, ...items.filter((_, idx) => idx !== existingIdx)];
-    if (updated.length > MAX_ITEMS) {
-      updated = updated.slice(0, MAX_ITEMS);
+
+    if (existingIdx >= 0 && !options?.isNewListing) {
+      // Atualiza in-place o anúncio existente
+      const existing = items[existingIdx];
+      const updatedItem: SavedProduct = {
+        ...existing,
+        input,
+        listing: { ...listing, id: targetId },
+      };
+      items[existingIdx] = updatedItem;
+      localStorage.setItem(RECENT_KEY, JSON.stringify(items));
+    } else {
+      // Adiciona novo anúncio
+      const newItem: SavedProduct = {
+        id: targetId,
+        createdAt: Date.now(),
+        input,
+        listing: { ...listing, id: targetId },
+        isCloud: true,
+      };
+      let updated = [newItem, ...items.filter((i) => i.id !== targetId)];
+      if (updated.length > MAX_ITEMS) {
+        updated = updated.slice(0, MAX_ITEMS);
+      }
+      localStorage.setItem(RECENT_KEY, JSON.stringify(updated));
     }
-    localStorage.setItem(RECENT_KEY, JSON.stringify(updated));
   } catch {
     // ignore
   }
 
-  // 2. Salva no Supabase de forma assíncrona em background
-  void saveListingToSupabase(listing, input);
+  // 2. Salva/Atualiza no Supabase de forma assíncrona em background
+  void saveListingToSupabase(listing, input, targetId);
 }
 
 export function removeSavedProduct(id: string) {
@@ -106,11 +130,11 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
 
   const loadAll = async () => {
     setLoading(true);
-    // 1. Carrega local primeiro (instantâneo)
+    // 1. Carrega local primeiro instantaneamente (0ms de espera)
     const local = getSavedProducts();
     setItems(local);
 
-    // 2. Sincroniza com o Supabase
+    // 2. Sincroniza com o Supabase em background
     try {
       const cloudList = await getRecentListingsFromSupabase(MAX_ITEMS);
       if (cloudList && cloudList.length > 0) {
@@ -122,6 +146,7 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
             photoDataUrl: db.photo_url || "",
           }) as ProductInput,
           listing: {
+            id: db.id,
             sku: db.sku,
             skuPai: db.sku_pai,
             skuFilho: db.sku_filho,
@@ -147,6 +172,7 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
           isCloud: true,
         }));
         setItems(mapped);
+        localStorage.setItem(RECENT_KEY, JSON.stringify(mapped));
       }
     } catch {
       // mantém os locais se falhar a rede

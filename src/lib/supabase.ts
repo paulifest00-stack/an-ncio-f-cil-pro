@@ -60,33 +60,39 @@ export interface DbListing {
   user_input?: any;
 }
 
-/** Salva o anúncio gerado no banco de dados Supabase */
+/** Salva ou atualiza o anúncio gerado no banco de dados Supabase (Upsert por ID) */
 export async function saveListingToSupabase(
   listing: Listing,
   input: ProductInput,
+  customId?: string,
 ): Promise<string | null> {
+  const targetId = listing.id || customId;
+  const payload: any = {
+    ...(targetId ? { id: targetId } : {}),
+    sku: listing.sku,
+    sku_pai: listing.skuPai,
+    sku_filho: listing.skuFilho,
+    variacoes_sku: listing.variacoesSku ?? [],
+    nome_interno: listing.nomeInterno,
+    titulo_mercadolivre: listing.tituloMercadoLivre,
+    descricao: listing.descricao,
+    palavras_chave: listing.palavrasChave,
+    ficha_tecnica: listing.fichaTecnica,
+    caracteristicas: listing.caracteristicas,
+    alertas: listing.alertas,
+    resumo: listing.resumo,
+    imagens: listing.imagens,
+    identificacao: listing.identificacao,
+    referencias: listing.referencias,
+    photo_url: input.photoDataUrl,
+    user_input: input,
+    updated_at: new Date().toISOString(),
+  };
+
   try {
     const { data, error } = await supabase
       .from("listings")
-      .insert({
-        sku: listing.sku,
-        sku_pai: listing.skuPai,
-        sku_filho: listing.skuFilho,
-        variacoes_sku: listing.variacoesSku ?? [],
-        nome_interno: listing.nomeInterno,
-        titulo_mercadolivre: listing.tituloMercadoLivre,
-        descricao: listing.descricao,
-        palavras_chave: listing.palavrasChave,
-        ficha_tecnica: listing.fichaTecnica,
-        caracteristicas: listing.caracteristicas,
-        alertas: listing.alertas,
-        resumo: listing.resumo,
-        imagens: listing.imagens,
-        identificacao: listing.identificacao,
-        referencias: listing.referencias,
-        photo_url: input.photoDataUrl,
-        user_input: input,
-      })
+      .upsert(payload, { onConflict: "id" })
       .select("id")
       .single();
 
@@ -94,7 +100,7 @@ export async function saveListingToSupabase(
       console.warn("Erro ao salvar no Supabase:", error.message);
       return null;
     }
-    return data?.id ?? null;
+    return data?.id ?? targetId ?? null;
   } catch (err) {
     console.warn("Falha de rede ao conectar com Supabase:", err);
     return null;

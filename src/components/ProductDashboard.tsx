@@ -243,7 +243,7 @@ export function ProductDashboard({
     patch({ variacoesSku: updatedVars });
   };
 
-  // Transforma o anúncio existente em Kit ou altera a quantidade chamando a IA no servidor
+  // Transforma o anúncio existente em Kit gerando um NOVO anúncio separado no histórico
   const handleSetKitQuantity = async (newQty: number) => {
     setIsConvertingKit(true);
     setError(null);
@@ -256,13 +256,26 @@ export function ProductDashboard({
         },
       });
       registerUsage("texto");
-      input.kitQuantity = newQty;
-      patch(res as Listing);
+
+      const newKitId = crypto.randomUUID();
+      const newKitListing: Listing = {
+        ...(res as Listing),
+        id: newKitId,
+        kitQuantity: newQty,
+      };
+      const newKitInput: ProductInput = {
+        ...input,
+        kitQuantity: newQty,
+      };
+
+      setListing(newKitListing);
+      // Cria um novo anúncio no histórico preservando o original
+      saveProductToHistory(newKitInput, newKitListing, { isNewListing: true });
 
       setKitNotice({
         qty: newQty,
         isKit: newQty > 1,
-        ean: res.ean || generateValidEan13("789"),
+        ean: newKitListing.ean || generateValidEan13("789"),
       });
       setShowKitModal(false);
     } catch (err) {

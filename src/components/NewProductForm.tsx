@@ -37,11 +37,13 @@ async function fileToCompressedDataUrl(file: File): Promise<string> {
 }
 
 const PRESETS = [
-  { label: "🍬 Paçoca Rolha 1kg", name: "Paçoca Rolha 100un 1kg", brand: "Yoki" },
-  { label: "🎈 Balão Látex 9 Pol", name: "Balão Látex Liso 9 Polegadas 50un", brand: "Pic Pic" },
-  { label: "🧤 Luva Nitrílica Preta", name: "Luva Nitrílica Sem Pó Preta Caixa 100un", brand: "Bompack" },
-  { label: "🎨 Tinta Spray Cabelo", name: "Tinta Pinta Cabelo Temporária 150ml", brand: "Popper" },
+  { label: "Paçoca Rolha 100un", name: "Paçoca Rolha 100un 1kg", brand: "Yoki" },
+  { label: "Balão Látex 9 Pol", name: "Balão Látex Liso 9 Polegadas 50un", brand: "Pic Pic" },
+  { label: "Luva Nitrílica Preta", name: "Luva Nitrílica Sem Pó Preta Caixa 100un", brand: "Bompack" },
+  { label: "Tinta Spray Cabelo", name: "Tinta Pinta Cabelo Temporária 150ml", brand: "Popper" },
+  { label: "Pote Retangular 24un", name: "Pote Retangular 24un", brand: "Gour Max" },
 ];
+const scanCache = new Map<string, any>();
 
 export function NewProductForm({
   onSubmit,
@@ -65,51 +67,58 @@ export function NewProductForm({
   const setField = (key: string, value: string) =>
     setOptional((prev) => ({ ...prev, [key]: value }));
 
+  const applyScanResult = (res: any) => {
+    if (res && res.sugestoes) {
+      const { basicName: autoName, brand, category, weight, packaging, ean } = res.sugestoes;
+      if (autoName) {
+        setBasicName(autoName);
+      }
+      setOptional((prev) => ({
+        ...prev,
+        ...(brand ? { brand } : {}),
+        ...(category ? { category } : {}),
+        ...(weight ? { weight } : {}),
+        ...(packaging ? { packaging } : {}),
+        ...(ean ? { ean } : {}),
+      }));
+
+      if (res.identificacao) {
+        setCachedIdentificacao(res.identificacao);
+        const foundItems = [
+          res.identificacao.marca && `Marca: ${res.identificacao.marca}`,
+          res.identificacao.volume && `Volume: ${res.identificacao.volume}`,
+          res.identificacao.linha && `Linha: ${res.identificacao.linha}`,
+        ].filter(Boolean);
+
+        setScanSuccessMsg(
+          foundItems.length > 0
+            ? `Identificado: ${foundItems.join(" · ")}`
+            : "Campos preenchidos a partir da foto!",
+        );
+        
+        if (brand || weight || category || ean) {
+          setShowOptional(true);
+        }
+      }
+    }
+  };
+
   const scanImage = async (compressedDataUrl: string) => {
+    const cacheKey = `${compressedDataUrl.slice(0, 80)}_${compressedDataUrl.length}`;
+    if (scanCache.has(cacheKey)) {
+      applyScanResult(scanCache.get(cacheKey));
+      return;
+    }
+
     setIsScanning(true);
     setScanSuccessMsg(null);
     try {
       const res = await quickScanPhoto({
         data: { photoDataUrl: compressedDataUrl },
       });
-
-      if (res && res.sugestoes) {
-        const { basicName: autoName, brand, category, weight, packaging, ean } = res.sugestoes;
-        
-        // Preenche o nome básico se não foi preenchido manualmente
-        if (autoName) {
-          setBasicName(autoName);
-        }
-
-        // Preenche campos opcionais identificados
-        setOptional((prev) => ({
-          ...prev,
-          ...(brand ? { brand } : {}),
-          ...(category ? { category } : {}),
-          ...(weight ? { weight } : {}),
-          ...(packaging ? { packaging } : {}),
-          ...(ean ? { ean } : {}),
-        }));
-
-        // Guarda a identificação para reutilizar na geração completa sem repetir a etapa
-        if (res.identificacao) {
-          setCachedIdentificacao(res.identificacao);
-          const foundItems = [
-            res.identificacao.marca && `Marca: ${res.identificacao.marca}`,
-            res.identificacao.volume && `Volume: ${res.identificacao.volume}`,
-            res.identificacao.linha && `Linha: ${res.identificacao.linha}`,
-          ].filter(Boolean);
-
-          setScanSuccessMsg(
-            foundItems.length > 0
-              ? `Foto identificada com sucesso (${foundItems.join(" • ")})`
-              : "Foto lida e campos preenchidos pela IA.",
-          );
-
-          if (brand || weight || category || ean) {
-            setShowOptional(true);
-          }
-        }
+      if (res) {
+        scanCache.set(cacheKey, res);
+        applyScanResult(res);
       }
     } catch (err) {
       console.warn("Falha no escaneamento automático da foto:", err);
@@ -345,105 +354,90 @@ export function NewProductForm({
             </div>
           </div>
 
-          {/* Campo 3: Formato de Venda & Montagem de Kits */}
-          <div className="rounded-2xl border border-border/80 bg-muted/20 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Layers className="size-4 text-primary" />
-                <Label className="text-xs font-semibold uppercase tracking-wider text-foreground">
-                  3. Formato de Venda (Avulso ou Kit)
-                </Label>
+          {/* Formato de Venda (Discreto e Minimalista) */}
+          <div className="rounded-xl border border-border/60 bg-muted/20 px-3.5 py-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                <Layers className="size-3.5 text-primary" />
+                <span>Formato:</span>
+                {currentEffectiveKitQty > 1 ? (
+                  <span className="rounded-md bg-primary/10 px-1.5 py-0.2 text-[10px] font-bold text-primary">
+                    Kit {currentEffectiveKitQty}x
+                  </span>
+                ) : (
+                  <span className="text-[11px] font-normal text-muted-foreground">
+                    1 Unidade (Padrão)
+                  </span>
+                )}
               </div>
-              <Badge
-                variant={currentEffectiveKitQty > 1 ? "default" : "secondary"}
-                className={`text-[10px] font-bold ${
-                  currentEffectiveKitQty > 1
-                    ? "bg-primary text-primary-foreground"
-                    : ""
-                }`}
-              >
-                {currentEffectiveKitQty > 1
-                  ? `Kit Promocional ${currentEffectiveKitQty}x Unidades`
-                  : "1 Unidade (Avulso)"}
-              </Badge>
+
+              {/* Pílulas Compactas */}
+              <div className="flex items-center gap-1">
+                {[
+                  { qty: 1, label: "1 Un" },
+                  { qty: 2, label: "2x" },
+                  { qty: 3, label: "3x" },
+                  { qty: 5, label: "5x" },
+                  { qty: 10, label: "10x" },
+                ].map((k) => {
+                  const isSelected = !isCustomKit && kitQuantity === k.qty;
+                  return (
+                    <button
+                      key={k.qty}
+                      type="button"
+                      onClick={() => {
+                        setIsCustomKit(false);
+                        setKitQuantity(k.qty);
+                      }}
+                      className={`rounded-lg px-2.5 py-1 text-xs font-medium transition-all active:scale-95 ${
+                        isSelected
+                          ? "bg-primary text-primary-foreground shadow-xs"
+                          : "bg-card text-muted-foreground border border-border/60 hover:text-foreground hover:border-primary/40"
+                      }`}
+                    >
+                      {k.label}
+                    </button>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCustomKit(!isCustomKit);
+                    if (!customKitVal) setCustomKitVal("8");
+                  }}
+                  className={`rounded-lg px-2 py-1 text-xs font-medium transition-all active:scale-95 ${
+                    isCustomKit
+                      ? "bg-primary text-primary-foreground shadow-xs"
+                      : "bg-card text-muted-foreground border border-border/60 hover:text-foreground hover:border-primary/40"
+                  }`}
+                  title="Definir outra quantidade de kit"
+                >
+                  {isCustomKit && customKitVal ? `${customKitVal}x` : "Outro..."}
+                </button>
+              </div>
             </div>
 
-            <p className="mt-1 text-xs text-muted-foreground">
-              Envie a foto de apenas 1 unidade. A IA multiplica automaticamente no título, fotos em fundo branco, descrição e SKU do kit!
-            </p>
-
-            {/* Pílulas de Seleção Rápida */}
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {[
-                { qty: 1, label: "1 Unidade" },
-                { qty: 2, label: "Kit 2x" },
-                { qty: 3, label: "Kit 3x" },
-                { qty: 4, label: "Kit 4x" },
-                { qty: 5, label: "Kit 5x" },
-                { qty: 6, label: "Kit 6x" },
-                { qty: 10, label: "Kit 10x" },
-                { qty: 12, label: "Kit 12x" },
-              ].map((k) => {
-                const isSelected = !isCustomKit && kitQuantity === k.qty;
-                return (
-                  <button
-                    key={k.qty}
-                    type="button"
-                    onClick={() => {
-                      setIsCustomKit(false);
-                      setKitQuantity(k.qty);
-                    }}
-                    className={`relative rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
-                      isSelected
-                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                        : "border border-border/70 bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                    }`}
-                  >
-                    {k.label}
-                  </button>
-                );
-              })}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsCustomKit(true);
-                  if (!customKitVal) setCustomKitVal("8");
-                }}
-                className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition-all active:scale-95 ${
-                  isCustomKit
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/25"
-                    : "border border-border/70 bg-card text-muted-foreground hover:border-primary/40 hover:text-foreground"
-                }`}
-              >
-                Personalizado...
-              </button>
-            </div>
-
-            {/* Input para Quantidade Personalizada de Kit */}
+            {/* Input discreto apenas se selecionou 'Outro' */}
             <AnimatePresence>
               {isCustomKit && (
                 <motion.div
                   initial={{ opacity: 0, height: 0 }}
                   animate={{ opacity: 1, height: "auto" }}
                   exit={{ opacity: 0, height: 0 }}
-                  className="mt-3 flex items-center gap-3 overflow-hidden rounded-xl border border-primary/30 bg-primary/5 p-3"
+                  className="mt-2 flex items-center justify-end gap-2 pt-1 border-t border-border/40"
                 >
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium text-foreground">
-                      Quantidade exata no Kit:
-                    </span>
-                    <Input
-                      type="number"
-                      min={2}
-                      max={1000}
-                      value={customKitVal}
-                      onChange={(e) => setCustomKitVal(e.target.value)}
-                      placeholder="Ex: 8, 20, 24..."
-                      className="h-8 w-24 rounded-lg bg-background text-center font-mono text-xs font-bold"
-                    />
-                    <span className="text-xs text-muted-foreground">unidades</span>
-                  </div>
+                  <span className="text-[11px] text-muted-foreground">Qtd exata no Kit:</span>
+                  <Input
+                    type="number"
+                    min={2}
+                    max={1000}
+                    value={customKitVal}
+                    onChange={(e) => setCustomKitVal(e.target.value)}
+                    placeholder="Ex: 8, 24"
+                    className="h-7 w-20 rounded-md bg-background text-center font-mono text-xs font-semibold"
+                  />
+                  <span className="text-[11px] text-muted-foreground">unidades</span>
                 </motion.div>
               )}
             </AnimatePresence>
