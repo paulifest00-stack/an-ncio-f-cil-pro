@@ -138,8 +138,8 @@ export function ProductDashboard({
   setListing: (l: Listing) => void;
   onBack: () => void;
   }) {
-  const [activeTab, setActiveTab] = useState<TabId>("ml");
-  const [mode, setMode] = useState<"tudo" | "ml" | "bling">("tudo");
+  const initialTab: TabId = input.mode === "bling" ? "bling" : "ml";
+  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [busy, setBusy] = useState<ListingSection | null>(null);
   const [imageState, setImageState] = useState<
     Record<number, { loading: boolean; url?: string; error?: string }>
