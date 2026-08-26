@@ -77,13 +77,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" },
-      { title: "Anúncio Fácil Pro — Criação Inteligente de Anúncios no Mercado Livre & Bling" },
-      { name: "description", content: "Crie anúncios de alta conversão para Mercado Livre e Bling com fotos 1:1 de fundo branco, quebra de objeções, SKUs padronizados e classificação fiscal NCM/EAN-13." },
-      { name: "author", content: "Anúncio Fácil Pro" },
-      { property: "og:title", content: "Anúncio Fácil Pro — Gerador Inteligente de Anúncios" },
+      { title: "MARKET AI — Gerador de Anúncios & Catálogo PRO (Mercado Livre & Bling)" },
+      { name: "description", content: "MARKET AI: Crie anúncios de alta conversão para Mercado Livre e Bling com fotos 1:1 em fundo branco, quebra de objeções, SKUs padronizados e classificação fiscal NCM/EAN-13." },
+      { name: "author", content: "MARKET AI" },
+      { property: "og:title", content: "MARKET AI — Gerador Inteligente de Anúncios para Marketplace" },
       { property: "og:description", content: "Fotos 1:1 com fundo branco, arte de quebra de objeções, SKUs padronizados e EAN-13 para marketplace." },
+      { property: "og:image", content: "/logo-market-ai.jpg" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "/logo-market-ai.jpg" },
     ],
     links: [
       {
@@ -91,7 +93,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
+
   }),
   shellComponent: RootShell,
   component: RootComponent,

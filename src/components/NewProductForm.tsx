@@ -209,17 +209,23 @@ export function NewProductForm({
       <div className="overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-4 shadow-xl backdrop-blur-2xl sm:p-7">
         {/* Cabeçalho Limpo e Direto */}
         <div className="border-b border-border/50 pb-4">
-          <div className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-semibold text-primary">
-            <Sparkles className="size-3.5" />
-            <span>Criação de Anúncios</span>
+          <div className="flex items-center justify-between">
+            <div className="inline-flex items-center gap-1.5 rounded-full bg-[#F5A623]/10 px-2.5 py-0.5 text-[11px] font-black text-[#D97706] dark:text-[#FBBF24] border border-[#F5A623]/30">
+              <Sparkles className="size-3.5 text-[#F5A623]" />
+              <span>MARKET AI PRO</span>
+            </div>
+            <span className="text-[10px] font-semibold text-muted-foreground">
+              Mercado Livre & Bling
+            </span>
           </div>
-          <h1 className="mt-1 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-            Novo Anúncio
+          <h1 className="mt-2 text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+            Novo Anúncio Inteligente
           </h1>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Envie a foto e informe o produto para gerar título, imagens, SKU, NCM, EAN e descrição completa.
+            Envie a foto e informe o produto para gerar título, imagens 1:1, SKU, NCM oficial, EAN e descrição completa.
           </p>
         </div>
+
 
         <div className="mt-5 space-y-5">
           {/* Passo 1: Foto com Leitor Automático */}

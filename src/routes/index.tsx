@@ -15,22 +15,25 @@ import { registerUsage } from "@/lib/usage";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Anúncio Fácil Pro — Criação Inteligente de Anúncios no Mercado Livre & Bling" },
+      { title: "MARKET AI — Gerador de Anúncios & Catálogo PRO (Mercado Livre & Bling)" },
       {
         name: "description",
         content:
-          "Envie a foto e o nome do produto e receba SKU Pai/Filho, título otimizado para o Mercado Livre (60 chars), descrição profissional, ficha técnica e imagem 1:1.",
+          "MARKET AI: Envie a foto e o nome do produto e receba SKU Pai/Filho, título otimizado para o Mercado Livre (60 chars), descrição profissional, ficha técnica oficial NCM e imagem 1:1.",
       },
-      { property: "og:title", content: "Anúncio Fácil Pro — Criação Inteligente de Anúncios" },
+      { property: "og:title", content: "MARKET AI — Criação Inteligente de Anúncios para Marketplace" },
       {
         property: "og:description",
         content:
           "Foto + nome viram um anúncio profissional completo, editável e pronto para faturar no Mercado Livre e Bling.",
       },
+      { property: "og:image", content: "/logo-market-ai.jpg" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:image", content: "/logo-market-ai.jpg" },
     ],
   }),
+
   component: Index,
 });
 
@@ -75,24 +78,32 @@ function Index() {
     <main className="min-h-screen bg-gradient-to-b from-background via-background/95 to-muted/20 px-3 pb-16 pt-3 sm:px-6 sm:pt-6">
       {/* Barra de Topo iOS 18 Frosted Glass */}
       <header className="sticky top-2 sm:top-4 z-40 mx-auto mb-5 sm:mb-8 flex w-full max-w-4xl items-center justify-between gap-2 rounded-2xl border border-border/70 bg-card/85 px-3 py-2 shadow-lg backdrop-blur-2xl transition-all sm:px-5 sm:py-2.5">
-        {/* Marca / Logo */}
+        {/* Marca / Logo MARKET AI */}
         <button
           type="button"
           onClick={() => setStage("form")}
-          className="flex items-center gap-2 text-left transition-transform active:scale-95 shrink-0"
+          className="flex items-center gap-2.5 text-left transition-transform active:scale-95 shrink-0 group"
         >
-          <div className="flex size-8 sm:size-9 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20">
-            <Sparkles className="size-4 sm:size-4.5" />
-          </div>
+          <img
+            src="/logo-market-ai.jpg"
+            alt="MARKET AI"
+            className="size-8 sm:size-9 rounded-xl shadow-md border border-border/80 object-cover bg-white shrink-0 group-hover:scale-105 transition-transform"
+          />
           <div>
-            <span className="text-xs sm:text-sm font-bold tracking-tight text-foreground">
-              Anúncio<span className="text-primary font-black"> Fácil</span>
-            </span>
-            <span className="ml-1 rounded-md bg-primary/10 px-1.5 py-0.2 text-[9px] sm:text-[10px] font-bold text-primary">
-              PRO
+            <div className="flex items-center gap-1">
+              <span className="text-xs sm:text-sm font-black tracking-tight text-foreground">
+                MARKET <span className="text-[#F5A623]">AI</span>
+              </span>
+              <span className="rounded-md bg-[#F5A623]/15 px-1.5 py-0.2 text-[9px] sm:text-[10px] font-black text-[#D97706] dark:text-[#FBBF24]">
+                PRO
+              </span>
+            </div>
+            <span className="text-[9px] text-muted-foreground font-medium hidden sm:block">
+              Anúncio Fácil Mercado Livre & Bling
             </span>
           </div>
         </button>
+
 
         {/* Ações da Direita: Meus Anúncios (Supabase) + Badge de Créditos */}
         <div className="flex items-center gap-1.5 sm:gap-2">
