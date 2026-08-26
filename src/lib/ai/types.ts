@@ -14,6 +14,7 @@ export interface ProductInput {
   photoDataUrl: string;
   basicName: string;
   kitQuantity?: number;
+  mode?: "tudo" | "ml" | "bling";
   brand?: string;
   ean?: string;
   ncm?: string;
