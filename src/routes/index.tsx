@@ -126,7 +126,7 @@ function Index() {
   return (
     <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-b from-background via-background/95 to-muted/20 px-2 sm:px-6 pb-16 pt-2 sm:pt-6">
       {/* Barra de Topo iOS 18 Frosted Glass */}
-      <header className="sticky top-2 sm:top-4 z-40 mx-auto mb-4 sm:mb-8 flex w-full max-w-4xl items-center justify-between gap-1.5 sm:gap-2 rounded-2xl border border-border/70 bg-card/85 px-2.5 py-1.5 sm:px-5 sm:py-2.5 shadow-lg backdrop-blur-2xl transition-all">
+      <header className="sticky top-2 sm:top-4 z-40 mx-auto mb-4 sm:mb-8 flex w-full max-w-4xl lg:max-w-6xl items-center justify-between gap-1.5 sm:gap-2 rounded-2xl border border-border/70 bg-card/85 px-2.5 py-1.5 sm:px-5 sm:py-2.5 shadow-lg backdrop-blur-2xl transition-all">
         {/* Marca / Logo MARKET AI */}
         <button
           type="button"
@@ -163,7 +163,8 @@ function Index() {
 
 
       {/* Conteúdo Principal com Transição Fluida iOS */}
-      <div className="mx-auto w-full max-w-4xl">
+      <div className="mx-auto w-full max-w-4xl lg:max-w-6xl">
+
         <AnimatePresence mode="wait">
           {stage === "form" && (
             <motion.div

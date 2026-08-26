@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera,
@@ -250,334 +249,348 @@ export function NewProductForm({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", duration: 0.3, bounce: 0 }}
-      className="mx-auto w-full max-w-lg"
+      className="mx-auto w-full max-w-lg lg:max-w-4xl transition-all"
     >
-      <div className="rounded-3xl border border-border/80 bg-card/95 p-4 sm:p-6 shadow-xl backdrop-blur-2xl space-y-4">
-        <div>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => void handleFile(e.target.files?.[0])}
-          />
+      <div className="rounded-3xl border border-border/80 bg-card/95 p-4 sm:p-6 lg:p-7 shadow-xl backdrop-blur-2xl">
+        <div className="flex flex-col lg:grid lg:grid-cols-12 lg:gap-7 lg:items-start space-y-4 lg:space-y-0">
+          {/* COLUNA ESQUERDA (DESKTOP: FOTO DO PRODUTO & STATUS) */}
+          <div className="lg:col-span-5 flex flex-col justify-between h-full space-y-3">
+            <div>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => void handleFile(e.target.files?.[0])}
+              />
 
-          <AnimatePresence mode="wait">
-            {photo ? (
-              <motion.div
-                key="preview"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                className="group relative overflow-hidden rounded-2xl border border-border bg-muted/10"
-              >
-                <div className="flex items-center justify-center p-3">
-                  <img
-                    src={photo}
-                    alt="Produto"
-                    className="max-h-48 w-auto rounded-xl object-contain shadow-xs"
-                  />
-                </div>
-
-                {isScanning && (
-                  <div className="absolute inset-x-0 top-0 flex items-center justify-center gap-1.5 bg-primary/90 py-1 text-xs font-semibold text-white backdrop-blur-md">
-                    <Loader2 className="size-3 animate-spin" />
-                    <span>Lendo embalagem...</span>
-                  </div>
-                )}
-
-                <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent p-2.5 text-white">
-                  <div className="flex items-center gap-1.5">
-                    {cachedIdentificacao ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-300">
-                        <CheckCircle2 className="size-3" />
-                        Identificado
-                      </span>
-                    ) : (
-                      <span className="text-[11px] font-medium text-white/80">Foto carregada</span>
-                    )}
-                  </div>
-                  <button
-                    type="button"
-                    onClick={clearPhoto}
-                    className="rounded-lg bg-white/20 px-2 py-0.5 text-[11px] font-medium backdrop-blur-md hover:bg-white/30"
+              <AnimatePresence mode="wait">
+                {photo ? (
+                  <motion.div
+                    key="preview"
+                    initial={{ opacity: 0, scale: 0.98 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.98 }}
+                    className="group relative overflow-hidden rounded-2xl border border-border bg-muted/10 lg:min-h-[260px] flex items-center justify-center"
                   >
-                    Trocar
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.button
-                key="dropzone"
-                type="button"
-                onClick={() => fileRef.current?.click()}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={handleDrop}
-                whileTap={{ scale: 0.98 }}
-                className={`group flex w-full flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed p-6 text-center transition-all ${
-                  isDragging
-                    ? "border-primary bg-primary/10"
-                    : "border-border/80 bg-muted/10 hover:border-primary/40 hover:bg-muted/20"
-                }`}
-              >
-                <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Camera className="size-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-foreground">
-                    Enviar ou Tirar Foto do Produto
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">
-                    Clique ou arraste a imagem aqui
-                  </p>
-                </div>
-              </motion.button>
-            )}
-          </AnimatePresence>
+                    <div className="flex items-center justify-center p-3 w-full">
+                      <img
+                        src={photo}
+                        alt="Produto"
+                        className="max-h-48 lg:max-h-56 w-auto rounded-xl object-contain shadow-xs"
+                      />
+                    </div>
 
-          {scanSuccessMsg && (
-            <div className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-              <Wand2 className="size-3 shrink-0" />
-              <span className="truncate">{scanSuccessMsg}</span>
+                    {isScanning && (
+                      <div className="absolute inset-x-0 top-0 flex items-center justify-center gap-1.5 bg-primary/90 py-1.5 text-xs font-semibold text-white backdrop-blur-md">
+                        <Loader2 className="size-3.5 animate-spin" />
+                        <span>Lendo embalagem...</span>
+                      </div>
+                    )}
+
+                    <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/70 to-transparent p-2.5 text-white">
+                      <div className="flex items-center gap-1.5">
+                        {cachedIdentificacao ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-300">
+                            <CheckCircle2 className="size-3" />
+                            Identificado
+                          </span>
+                        ) : (
+                          <span className="text-[11px] font-medium text-white/80">Foto carregada</span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearPhoto}
+                        className="rounded-lg bg-white/20 px-2 py-0.5 text-[11px] font-medium backdrop-blur-md hover:bg-white/30"
+                      >
+                        Trocar
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    key="dropzone"
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDragging(true);
+                    }}
+                    onDragLeave={() => setIsDragging(false)}
+                    onDrop={handleDrop}
+                    whileTap={{ scale: 0.98 }}
+                    className={`group flex w-full flex-col items-center justify-center gap-2.5 rounded-2xl border-2 border-dashed p-6 lg:p-8 text-center transition-all lg:min-h-[260px] ${
+                      isDragging
+                        ? "border-primary bg-primary/10"
+                        : "border-border/80 bg-muted/10 hover:border-primary/40 hover:bg-muted/20"
+                    }`}
+                  >
+                    <div className="flex size-11 items-center justify-center rounded-2xl bg-primary/10 text-primary group-hover:scale-110 transition-transform">
+                      <Camera className="size-5.5" />
+                    </div>
+                    <div>
+                      <p className="text-xs sm:text-sm font-bold text-foreground">
+                        Enviar Foto do Produto
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Clique ou arraste a imagem aqui
+                      </p>
+                    </div>
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              {scanSuccessMsg && (
+                <div className="mt-2 flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                  <Wand2 className="size-3.5 shrink-0" />
+                  <span className="truncate">{scanSuccessMsg}</span>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        <div className="space-y-1">
-          <Label htmlFor="basicName" className="text-xs font-bold text-foreground">
-            Nome do Produto
-          </Label>
-          <Input
-            id="basicName"
-            value={basicName}
-            placeholder="Ex: Garrafa térmica inox 1L preta"
-            onChange={(e) => setBasicName(e.target.value)}
-            className="h-10 rounded-xl bg-background text-xs font-medium"
-          />
-        </div>
-
-        <div className="rounded-2xl border border-border/80 bg-muted/20 p-2.5 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
-              <Layers className="size-3.5 text-primary" />
-              Formato de Venda
-            </span>
-
-            <div className="flex items-center rounded-xl bg-background border border-border/80 p-0.5">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsKitMode(false);
-                  setKitQuantity(1);
-                  setIsCustomKit(false);
-                }}
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
-                  !isKitMode
-                    ? "bg-primary text-white shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                1 Unidade
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsKitMode(true);
-                  if (kitQuantity <= 1) setKitQuantity(2);
-                }}
-                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
-                  isKitMode
-                    ? "bg-primary text-white shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Kit Multi {isKitMode ? `(${currentEffectiveKitQty}x)` : "▾"}
-              </button>
+            {/* Dica Studio para Desktop */}
+            <div className="hidden lg:flex items-center gap-2 rounded-xl border border-border/60 bg-muted/20 p-3 text-[11px] text-muted-foreground">
+              <Sparkles className="size-4 shrink-0 text-amber-500" />
+              <span>Fotos nítidas com embalagem visível permitem que a IA extraia dados fiscais automaticamente.</span>
             </div>
           </div>
 
-          <AnimatePresence>
-            {isKitMode && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden pt-1.5 border-t border-border/60"
-              >
-                <div className="flex flex-wrap gap-1 items-center">
-                  {[2, 3, 4, 5, 6, 10, 12].map((qty) => {
-                    const isSelected = !isCustomKit && kitQuantity === qty;
-                    return (
+          {/* COLUNA DIREITA (DESKTOP: FORMULÁRIO, KIT E BOTÕES) */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className="space-y-1">
+              <Label htmlFor="basicName" className="text-xs font-bold text-foreground">
+                Nome do Produto
+              </Label>
+              <Input
+                id="basicName"
+                value={basicName}
+                placeholder="Ex: Garrafa térmica inox 1L preta"
+                onChange={(e) => setBasicName(e.target.value)}
+                className="h-10 rounded-xl bg-background text-xs sm:text-sm font-medium"
+              />
+            </div>
+
+            <div className="rounded-2xl border border-border/80 bg-muted/20 p-2.5 sm:p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Layers className="size-3.5 text-primary" />
+                  Formato de Venda
+                </span>
+
+                <div className="flex items-center rounded-xl bg-background border border-border/80 p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsKitMode(false);
+                      setKitQuantity(1);
+                      setIsCustomKit(false);
+                    }}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                      !isKitMode
+                        ? "bg-primary text-white shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    1 Unidade
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsKitMode(true);
+                      if (kitQuantity <= 1) setKitQuantity(2);
+                    }}
+                    className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all ${
+                      isKitMode
+                        ? "bg-primary text-white shadow-xs"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    Kit Multi {isKitMode ? `(${currentEffectiveKitQty}x)` : "▾"}
+                  </button>
+                </div>
+              </div>
+
+              <AnimatePresence>
+                {isKitMode && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden pt-1.5 border-t border-border/60"
+                  >
+                    <div className="flex flex-wrap gap-1 items-center">
+                      {[2, 3, 4, 5, 6, 10, 12].map((qty) => {
+                        const isSelected = !isCustomKit && kitQuantity === qty;
+                        return (
+                          <button
+                            key={qty}
+                            type="button"
+                            onClick={() => {
+                              setIsCustomKit(false);
+                              setKitQuantity(qty);
+                            }}
+                            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all active:scale-95 ${
+                              isSelected
+                                ? "bg-primary text-white shadow-xs"
+                                : "bg-background border border-border text-muted-foreground hover:text-foreground"
+                            }`}
+                          >
+                            {qty}x
+                          </button>
+                        );
+                      })}
+
                       <button
-                        key={qty}
                         type="button"
                         onClick={() => {
-                          setIsCustomKit(false);
-                          setKitQuantity(qty);
+                          setIsCustomKit(true);
+                          if (!customKitVal) setCustomKitVal("8");
                         }}
-                        className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all active:scale-95 ${
-                          isSelected
+                        className={`rounded-lg px-2 py-1 text-xs font-semibold transition-all ${
+                          isCustomKit
                             ? "bg-primary text-white shadow-xs"
                             : "bg-background border border-border text-muted-foreground hover:text-foreground"
                         }`}
                       >
-                        {qty}x
+                        Outro
                       </button>
-                    );
-                  })}
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCustomKit(true);
-                      if (!customKitVal) setCustomKitVal("8");
-                    }}
-                    className={`rounded-lg px-2 py-1 text-xs font-semibold transition-all ${
-                      isCustomKit
-                        ? "bg-primary text-white shadow-xs"
-                        : "bg-background border border-border text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    Outro
-                  </button>
+                      {isCustomKit && (
+                        <Input
+                          type="number"
+                          min={2}
+                          max={999}
+                          value={customKitVal}
+                          onChange={(e) => setCustomKitVal(e.target.value)}
+                          placeholder="Qtd"
+                          className="h-7 w-14 rounded-lg bg-background text-center text-xs font-bold"
+                        />
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-                  {isCustomKit && (
-                    <Input
-                      type="number"
-                      min={2}
-                      max={999}
-                      value={customKitVal}
-                      onChange={(e) => setCustomKitVal(e.target.value)}
-                      placeholder="Qtd"
-                      className="h-7 w-14 rounded-lg bg-background text-center text-xs font-bold"
-                    />
+            <div className="rounded-2xl border border-border/60 bg-muted/10 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowOptional(!showOptional)}
+                className="flex w-full items-center justify-between p-2.5 sm:p-3 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <div className="flex items-center gap-1.5">
+                  <PackagePlus className="size-3.5" />
+                  <span>Campos Opcionais (Marca, NCM, EAN)</span>
+                  {Object.values(optional).filter(Boolean).length > 0 && (
+                    <Badge variant="secondary" className="px-1 py-0 text-[10px]">
+                      {Object.values(optional).filter(Boolean).length}
+                    </Badge>
                   )}
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                <ChevronDown
+                  className={`size-3.5 transition-transform duration-200 ${
+                    showOptional ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
 
-        <div className="rounded-2xl border border-border/60 bg-muted/10 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setShowOptional(!showOptional)}
-            className="flex w-full items-center justify-between p-2.5 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors"
-          >
-            <div className="flex items-center gap-1.5">
-              <PackagePlus className="size-3.5" />
-              <span>Campos Opcionais (Marca, NCM, EAN)</span>
-              {Object.values(optional).filter(Boolean).length > 0 && (
-                <Badge variant="secondary" className="px-1 py-0 text-[10px]">
-                  {Object.values(optional).filter(Boolean).length}
-                </Badge>
-              )}
-            </div>
-            <ChevronDown
-              className={`size-3.5 transition-transform duration-200 ${
-                showOptional ? "rotate-180" : ""
-              }`}
-            />
-          </button>
-
-          <AnimatePresence>
-            {showOptional && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="border-t border-border/60 p-3 space-y-2.5"
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label className="text-[10px] font-semibold text-muted-foreground">Marca</Label>
-                    <Input
-                      placeholder="Ex: Tramontina"
-                      value={optional["brand"] ?? ""}
-                      onChange={(e) => setField("brand", e.target.value)}
-                      className="h-8 rounded-lg text-xs"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px] font-semibold text-muted-foreground">Categoria</Label>
-                    <Input
-                      placeholder="Ex: Cozinha"
-                      value={optional["category"] ?? ""}
-                      onChange={(e) => setField("category", e.target.value)}
-                      className="h-8 rounded-lg text-xs"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <Label className="text-[10px] font-semibold text-muted-foreground">EAN-13</Label>
-                      <button
-                        type="button"
-                        onClick={() => setField("ean", generateValidEan13("789"))}
-                        className="text-[9px] font-bold text-primary hover:underline flex items-center gap-0.5"
-                      >
-                        <Zap className="size-2.5" /> Gerar
-                      </button>
+              <AnimatePresence>
+                {showOptional && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="border-t border-border/60 p-3 space-y-2.5"
+                  >
+                    <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
+                      <div>
+                        <Label className="text-[10px] font-semibold text-muted-foreground">Marca</Label>
+                        <Input
+                          placeholder="Ex: Tramontina"
+                          value={optional["brand"] ?? ""}
+                          onChange={(e) => setField("brand", e.target.value)}
+                          className="h-8 rounded-lg text-xs"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] font-semibold text-muted-foreground">Categoria</Label>
+                        <Input
+                          placeholder="Ex: Cozinha"
+                          value={optional["category"] ?? ""}
+                          onChange={(e) => setField("category", e.target.value)}
+                          className="h-8 rounded-lg text-xs"
+                        />
+                      </div>
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <Label className="text-[10px] font-semibold text-muted-foreground">EAN-13</Label>
+                          <button
+                            type="button"
+                            onClick={() => setField("ean", generateValidEan13("789"))}
+                            className="text-[9px] font-bold text-primary hover:underline flex items-center gap-0.5"
+                          >
+                            <Zap className="size-2.5" /> Gerar
+                          </button>
+                        </div>
+                        <Input
+                          placeholder="789..."
+                          value={optional["ean"] ?? ""}
+                          onChange={(e) => setField("ean", e.target.value)}
+                          className="h-8 rounded-lg text-xs font-mono"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] font-semibold text-muted-foreground">NCM Oficial</Label>
+                        <Input
+                          placeholder="Ex: 9617.00.10"
+                          value={optional["ncm"] ?? ""}
+                          onChange={(e) => setField("ncm", e.target.value)}
+                          className="h-8 rounded-lg text-xs font-mono"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] font-semibold text-muted-foreground">Peso/Vol</Label>
+                        <Input
+                          placeholder="Ex: 1kg, 500ml"
+                          value={optional["weight"] ?? ""}
+                          onChange={(e) => setField("weight", e.target.value)}
+                          className="h-8 rounded-lg text-xs"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-[10px] font-semibold text-muted-foreground">Custo (R$)</Label>
+                        <Input
+                          placeholder="R$ 0,00"
+                          value={optional["cost"] ?? ""}
+                          onChange={(e) => setField("cost", e.target.value)}
+                          className="h-8 rounded-lg text-xs"
+                        />
+                      </div>
                     </div>
-                    <Input
-                      placeholder="789..."
-                      value={optional["ean"] ?? ""}
-                      onChange={(e) => setField("ean", e.target.value)}
-                      className="h-8 rounded-lg text-xs font-mono"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px] font-semibold text-muted-foreground">NCM Oficial</Label>
-                    <Input
-                      placeholder="Ex: 9617.00.10"
-                      value={optional["ncm"] ?? ""}
-                      onChange={(e) => setField("ncm", e.target.value)}
-                      className="h-8 rounded-lg text-xs font-mono"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px] font-semibold text-muted-foreground">Peso/Vol</Label>
-                    <Input
-                      placeholder="Ex: 1kg, 500ml"
-                      value={optional["weight"] ?? ""}
-                      onChange={(e) => setField("weight", e.target.value)}
-                      className="h-8 rounded-lg text-xs"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-[10px] font-semibold text-muted-foreground">Custo (R$)</Label>
-                    <Input
-                      placeholder="R$ 0,00"
-                      value={optional["cost"] ?? ""}
-                      onChange={(e) => setField("cost", e.target.value)}
-                      className="h-8 rounded-lg text-xs"
-                    />
-                  </div>
-                </div>
-              </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {error && (
+              <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-2.5 text-xs font-medium text-destructive">
+                {error}
+              </div>
             )}
-          </AnimatePresence>
-        </div>
 
-        {error && (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-2.5 text-xs font-medium text-destructive">
-            {error}
+            <Button
+              size="lg"
+              disabled={isScanning}
+              onClick={submit}
+              className="h-11 w-full gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-xs sm:text-sm font-bold text-white shadow-md transition-all active:scale-98 hover:shadow-lg"
+            >
+              {isScanning ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+              <span>{isScanning ? "Lendo Imagem..." : "Gerar Anúncio Profissional"}</span>
+            </Button>
           </div>
-        )}
-
-        <Button
-          size="lg"
-          disabled={isScanning}
-          onClick={submit}
-          className="h-11 w-full gap-2 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-xs font-bold text-white shadow-md transition-all active:scale-98"
-        >
-          {isScanning ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
-          <span>{isScanning ? "Lendo Imagem..." : "Gerar Anúncio Profissional"}</span>
-        </Button>
+        </div>
       </div>
     </motion.div>
   );
