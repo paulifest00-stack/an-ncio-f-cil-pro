@@ -551,10 +551,38 @@ export function ProductDashboard({
         )}
       </AnimatePresence>
 
+      {/* Seletor de destino do cadastro */}
+      <div className="flex items-center gap-1 rounded-2xl border border-border/80 bg-muted/40 p-1">
+        {([
+          { id: "tudo", label: "Tudo" },
+          { id: "ml", label: "Só Mercado Livre" },
+          { id: "bling", label: "Só Bling" },
+        ] as const).map((m) => (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => {
+              setMode(m.id);
+              if (m.id === "bling") setActiveTab("bling");
+              else if (m.id === "ml" && activeTab === "bling") setActiveTab("ml");
+            }}
+            className={`flex-1 rounded-xl px-2 py-1.5 text-[11px] sm:text-xs font-bold transition-all ${
+              mode === m.id
+                ? "bg-card text-foreground shadow-sm border border-border/60"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {m.label}
+          </button>
+        ))}
+      </div>
+
       {/* 2. Navegação Segmented Control iOS com Pílula Deslizante */}
       <div className="no-scrollbar flex w-full overflow-x-auto rounded-2xl border border-border/80 bg-muted/40 p-1 backdrop-blur-xl">
         <div className="flex w-full min-w-max gap-1">
-          {TABS.map((tab) => {
+          {TABS.filter((t) =>
+            mode === "bling" ? t.id === "bling" : mode === "ml" ? t.id !== "bling" : true,
+          ).map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             const badgeCount =
