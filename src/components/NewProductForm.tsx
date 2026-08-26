@@ -245,6 +245,7 @@ export function NewProductForm({
       photoDataUrl: photo,
       basicName: basicName.trim(),
       kitQuantity: currentEffectiveKitQty,
+      mode,
       ...optional,
       ...(cachedIdentificacao ? { cachedIdentificacao } : {}),
     });
