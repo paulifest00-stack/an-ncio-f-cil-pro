@@ -26,14 +26,25 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
 
+let memoryHealthCache: { result: DetailedAiHealthResult; timestamp: number } | null = null;
+
 export function AiCreditsBadge() {
-  const [health, setHealth] = useState<DetailedAiHealthResult | null>(null);
+  const [health, setHealth] = useState<DetailedAiHealthResult | null>(
+    () => memoryHealthCache?.result ?? null
+  );
   const [loading, setLoading] = useState(false);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [keyModalOpen, setKeyModalOpen] = useState(false);
   const [config, setConfig] = useState<UserKeysStorage>({ selectedKeyId: "auto", keys: [] });
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
+    const now = Date.now();
+    // 0ms instant response from cache if fresh (< 45s)
+    if (!force && memoryHealthCache && now - memoryHealthCache.timestamp < 45000) {
+      setHealth(memoryHealthCache.result);
+      return;
+    }
+
     setLoading(true);
     try {
       const currentConfig = getStoredUserKeysConfig();
@@ -50,6 +61,7 @@ export function AiCreditsBadge() {
           selectedKeyId: currentConfig.selectedKeyId,
         },
       });
+      memoryHealthCache = { result: res, timestamp: Date.now() };
       setHealth(res);
     } catch (err) {
       console.error("Erro ao verificar saúde das chaves de IA:", err);
@@ -57,6 +69,7 @@ export function AiCreditsBadge() {
       setLoading(false);
     }
   }, []);
+
 
   useEffect(() => {
     void refresh();

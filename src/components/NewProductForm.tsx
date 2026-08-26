@@ -1,4 +1,5 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Camera,
@@ -54,10 +55,78 @@ export function NewProductForm({
   const [cachedIdentificacao, setCachedIdentificacao] = useState<Identificacao | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // 1. Restaura Rascunho do Cache Local ao Carregar (0ms)
+  useEffect(() => {
+    try {
+      const savedDraft = sessionStorage.getItem("market_ai_form_draft");
+      if (savedDraft) {
+        const parsed = JSON.parse(savedDraft);
+        if (parsed.basicName) setBasicName(parsed.basicName);
+        if (parsed.photo) setPhoto(parsed.photo);
+        if (parsed.isKitMode) setIsKitMode(parsed.isKitMode);
+        if (parsed.kitQuantity) setKitQuantity(parsed.kitQuantity);
+        if (parsed.optional) setOptional(parsed.optional);
+        if (parsed.cachedIdentificacao) setCachedIdentificacao(parsed.cachedIdentificacao);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // 2. Salva Rascunho no Cache Local em Background
+  useEffect(() => {
+    try {
+      if (basicName || photo || Object.keys(optional).length > 0) {
+        sessionStorage.setItem(
+          "market_ai_form_draft",
+          JSON.stringify({
+            basicName,
+            photo,
+            isKitMode,
+            kitQuantity,
+            optional,
+            cachedIdentificacao,
+          }),
+        );
+      }
+    } catch {
+      // ignore
+    }
+  }, [basicName, photo, isKitMode, kitQuantity, optional, cachedIdentificacao]);
+
   const setField = (key: string, value: string) =>
     setOptional((prev) => ({ ...prev, [key]: value }));
 
+  const getPhotoSignature = (dataUrl: string) => {
+    return `photo_${dataUrl.length}_${dataUrl.slice(30, 90)}_${dataUrl.slice(-60)}`;
+  };
+
   const scanImage = async (compressedDataUrl: string) => {
+    const photoKey = getPhotoSignature(compressedDataUrl);
+
+    // Verifica Cache Local do Scanner (0ms)
+    try {
+      const rawCache = localStorage.getItem("market_ai_scan_cache_v1");
+      if (rawCache) {
+        const scanCache = JSON.parse(rawCache);
+        if (scanCache[photoKey]) {
+          const cached = scanCache[photoKey];
+          if (cached.identificacao) setCachedIdentificacao(cached.identificacao);
+          if (cached.sugestoes) {
+            if (cached.sugestoes.basicName && !basicName) setBasicName(cached.sugestoes.basicName);
+            if (cached.sugestoes.brand) setField("brand", cached.sugestoes.brand);
+            if (cached.sugestoes.category) setField("category", cached.sugestoes.category);
+            if (cached.sugestoes.weight) setField("weight", cached.sugestoes.weight);
+            if (cached.sugestoes.ean) setField("ean", cached.sugestoes.ean);
+          }
+          setScanSuccessMsg("Carregado instantaneamente do cache local.");
+          return;
+        }
+      }
+    } catch {
+      // fallback
+    }
+
     setIsScanning(true);
     setScanSuccessMsg(null);
     try {
@@ -102,6 +171,19 @@ export function NewProductForm({
           
           setScanSuccessMsg(sug.basicName ? `Detectado: ${sug.basicName}` : "Rótulo identificado com sucesso.");
         }
+
+        // Grava no Cache Local do Scanner
+        try {
+          const rawCache = localStorage.getItem("market_ai_scan_cache_v1");
+          const scanCache = rawCache ? JSON.parse(rawCache) : {};
+          scanCache[photoKey] = {
+            identificacao: res.identificacao,
+            sugestoes: res.sugestoes,
+          };
+          localStorage.setItem("market_ai_scan_cache_v1", JSON.stringify(scanCache));
+        } catch {
+          // ignore
+        }
       }
     } catch {
       // fallback silencioso para não poluir
@@ -134,6 +216,11 @@ export function NewProductForm({
     setCachedIdentificacao(null);
     setScanSuccessMsg(null);
     if (fileRef.current) fileRef.current.value = "";
+    try {
+      sessionStorage.removeItem("market_ai_form_draft");
+    } catch {
+      // ignore
+    }
   };
 
   const currentEffectiveKitQty = isKitMode

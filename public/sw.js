@@ -1,6 +1,6 @@
-// MARKET AI - Progressive Web App Service Worker
-const CACHE_NAME = "market-ai-pwa-v1";
-const STATIC_ASSETS = [
+// MARKET AI - Progressive Web App Service Worker (High-Speed Local Cache)
+const CACHE_NAME = "market-ai-pwa-v2";
+const PRECACHE_ASSETS = [
   "/",
   "/favicon.ico",
   "/favicon.png",
@@ -14,8 +14,8 @@ const STATIC_ASSETS = [
 self.addEventListener("install", (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn("[PWA] Falha ao pré-carregar alguns assets:", err);
+      return cache.addAll(PRECACHE_ASSETS).catch((err) => {
+        console.warn("[PWA] Cache pre-warming avisos:", err);
       });
     })
   );
@@ -36,38 +36,27 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
 
-  // Não intercepta chamadas POST ou endpoints internos de servidor
+  // Não intercepta chamadas POST ou server functions /_server
   if (event.request.method !== "GET" || url.pathname.startsWith("/_server") || url.pathname.startsWith("/api/")) {
     return;
   }
 
+  // Stale-While-Revalidate para máxima velocidade instantânea (0-5ms)
   event.respondWith(
-    fetch(event.request)
-      .then((networkResponse) => {
-        // Se a resposta for válida para static assets, guarda no cache
-        if (
-          networkResponse &&
-          networkResponse.status === 200 &&
-          (url.pathname.endsWith(".png") ||
-            url.pathname.endsWith(".jpg") ||
-            url.pathname.endsWith(".ico") ||
-            url.pathname.endsWith(".css") ||
-            url.pathname.endsWith(".js"))
-        ) {
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-        }
-        return networkResponse;
-      })
-      .catch(async () => {
-        const cached = await caches.match(event.request);
-        if (cached) return cached;
-        if (event.request.mode === "navigate") {
-          return (await caches.match("/")) || Response.error();
-        }
-        return Response.error();
-      })
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const cachedResponse = await cache.match(event.request);
+
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            cache.put(event.request, networkResponse.clone());
+          }
+          return networkResponse;
+        })
+        .catch(() => cachedResponse);
+
+      // Retorna o cache local imediatamente se existir; caso contrário aguarda a rede
+      return cachedResponse || fetchPromise;
+    })
   );
 });

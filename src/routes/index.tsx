@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, Zap } from "lucide-react";
@@ -40,10 +41,48 @@ export const Route = createFileRoute("/")({
 type Stage = "form" | "processing" | "result";
 
 function Index() {
-  const [stage, setStage] = useState<Stage>("form");
-  const [input, setInput] = useState<ProductInput | null>(null);
-  const [listing, setListing] = useState<Listing | null>(null);
+  const [stage, setStage] = useState<Stage>(() => {
+    if (typeof window === "undefined") return "form";
+    try {
+      const saved = sessionStorage.getItem("market_ai_active_state");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.listing && parsed.input) return "result";
+      }
+    } catch {}
+    return "form";
+  });
+
+  const [input, setInput] = useState<ProductInput | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved = sessionStorage.getItem("market_ai_active_state");
+      if (saved) return JSON.parse(saved).input;
+    } catch {}
+    return null;
+  });
+
+  const [listing, setListing] = useState<Listing | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved = sessionStorage.getItem("market_ai_active_state");
+      if (saved) return JSON.parse(saved).listing;
+    } catch {}
+    return null;
+  });
+
   const [error, setError] = useState<string | null>(null);
+
+  // Sincroniza estado ativo com sessionStorage para restauração em 0ms
+  useEffect(() => {
+    try {
+      if (stage === "result" && listing && input) {
+        sessionStorage.setItem("market_ai_active_state", JSON.stringify({ listing, input }));
+      } else if (stage === "form") {
+        sessionStorage.removeItem("market_ai_active_state");
+      }
+    } catch {}
+  }, [stage, listing, input]);
 
   const run = async (data: ProductInput) => {
     setInput(data);
@@ -67,12 +106,22 @@ function Index() {
     }
   };
 
-
   const handleSelectSaved = (saved: { input: ProductInput; listing: Listing }) => {
     setInput(saved.input);
     setListing(saved.listing);
     setStage("result");
   };
+
+  const handleNew = () => {
+    try {
+      sessionStorage.removeItem("market_ai_active_state");
+      sessionStorage.removeItem("market_ai_form_draft");
+    } catch {}
+    setInput(null);
+    setListing(null);
+    setStage("form");
+  };
+
 
   return (
     <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-b from-background via-background/95 to-muted/20 px-2 sm:px-6 pb-16 pt-2 sm:pt-6">
@@ -81,9 +130,10 @@ function Index() {
         {/* Marca / Logo MARKET AI */}
         <button
           type="button"
-          onClick={() => setStage("form")}
+          onClick={handleNew}
           className="flex items-center gap-2 sm:gap-2.5 text-left transition-transform active:scale-95 shrink-0 group min-w-0"
         >
+
           <img
             src="/logo-market-ai.jpg"
             alt="MARKET AI"
@@ -154,8 +204,9 @@ function Index() {
                 input={input}
                 listing={listing}
                 setListing={setListing}
-                onBack={() => setStage("form")}
+                onBack={handleNew}
               />
+
             </motion.div>
           )}
         </AnimatePresence>

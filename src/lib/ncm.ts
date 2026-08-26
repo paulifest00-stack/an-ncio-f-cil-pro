@@ -68,8 +68,10 @@ export function validarNcmOficial(code: string | undefined | null): NcmValidatio
   };
 }
 
+const ncmSearchCache = new Map<string, Array<{ codigo: string; formatado: string; descricao: string }>>();
+
 /**
- * Busca códigos NCM oficiais por termo ou palavra-chave (busca fuzzy simples).
+ * Busca códigos NCM oficiais por termo ou palavra-chave (busca fuzzy com cache instantâneo).
  */
 export function buscarNcmPorTermo(
   termo: string,
@@ -82,6 +84,11 @@ export function buscarNcmPorTermo(
     .trim();
 
   if (!cleanTerm || cleanTerm.length < 3) return [];
+
+  const cacheKey = `${cleanTerm}_${limite}`;
+  if (ncmSearchCache.has(cacheKey)) {
+    return ncmSearchCache.get(cacheKey)!;
+  }
 
   const words = cleanTerm.split(/\s+/).filter(Boolean);
   const results: Array<{ codigo: string; formatado: string; descricao: string; score: number }> = [];
@@ -107,8 +114,12 @@ export function buscarNcmPorTermo(
     }
   }
 
-  return results
+  const finalResults = results
     .sort((a, b) => b.score - a.score)
     .slice(0, limite)
     .map(({ codigo, formatado, descricao }) => ({ codigo, formatado, descricao }));
+
+  ncmSearchCache.set(cacheKey, finalResults);
+  return finalResults;
 }
+
