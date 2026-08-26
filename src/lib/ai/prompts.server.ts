@@ -30,7 +30,7 @@ export function userDataBlock(input: ProductInput): string {
     ["Peso/Volume individual", input.weight],
     ["Dimensões", input.dimensions],
     ["Embalagem", input.packaging],
-    ["Outras informações", input.other],
+    ["Descrição do produto escrita pelo vendedor (informação confiável, use como fonte)", input.other],
   ];
 
   const formatted = pairs
