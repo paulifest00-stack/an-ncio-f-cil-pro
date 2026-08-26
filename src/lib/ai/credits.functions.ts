@@ -1,8 +1,32 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { getApiKeys, testSingleKey } from "./gateway.server";
+import { getApiKeys, getServerKeysList, testSingleKey } from "./gateway.server";
 
 export type AiStatus = "ok" | "sem_creditos" | "limite_temporario" | "indisponivel";
+
+export interface KeyHealthDetail {
+  id: string;
+  name: string;
+  isServer: boolean;
+  maskedKey: string;
+  provider: "lovable" | "gemini_direct";
+  status: "ok" | "sem_creditos" | "limite_temporario" | "invalida" | "erro";
+  message: string;
+  testedAt: string;
+  enabled?: boolean;
+}
+
+export interface DetailedAiHealthResult {
+  overallStatus: AiStatus;
+  overallMessage: string;
+  selectedKeyId: string;
+  activeKeyLabel: string;
+  serverKeys: KeyHealthDetail[];
+  userKeys: KeyHealthDetail[];
+  totalAvailableKeys: number;
+  totalWorkingKeys: number;
+  checkedAt: string;
+}
 
 export interface AiStatusResult {
   status: AiStatus;
@@ -24,7 +48,190 @@ export const validateSingleKeyServer = createServerFn({ method: "POST" })
   });
 
 /**
- * Verifica o status de saúde das chaves de API disponíveis no pool (servidor + chaves do usuário).
+ * Verifica detalhadamente o status e créditos de cada chave (servidor + usuário)
+ */
+export const checkDetailedAiHealthServer = createServerFn({ method: "POST" })
+  .validator((data: unknown) =>
+    z
+      .object({
+        userKeys: z
+          .array(
+            z.object({
+              id: z.string(),
+              key: z.string(),
+              name: z.string().optional(),
+              enabled: z.boolean().optional(),
+            }),
+          )
+          .optional(),
+        selectedKeyId: z.string().optional(),
+      })
+      .optional()
+      .parse(data),
+  )
+  .handler(async ({ data }): Promise<DetailedAiHealthResult> => {
+    const checkedAt = new Date().toISOString();
+    const selectedKeyId = data?.selectedKeyId || "auto";
+    const clientUserKeys = data?.userKeys || [];
+
+    const testKeyDirect = async (
+      rawKey: string,
+      provider: "lovable" | "gemini_direct",
+    ): Promise<{ status: KeyHealthDetail["status"]; message: string }> => {
+      const baseUrl =
+        provider === "gemini_direct"
+          ? "https://generativelanguage.googleapis.com/v1beta/openai"
+          : "https://ai.gateway.lovable.dev/v1";
+      const model =
+        provider === "gemini_direct" ? "gemini-2.5-flash" : "google/gemini-3.7-flash";
+
+      try {
+        const res = await fetch(`${baseUrl}/chat/completions`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${rawKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "user", content: "ping" }],
+            max_tokens: 2,
+          }),
+        });
+
+        if (res.ok) {
+          return { status: "ok", message: "Chave ativa • Créditos disponíveis" };
+        }
+        if (res.status === 402) {
+          return { status: "sem_creditos", message: "Créditos de IA esgotados (Erro 402)" };
+        }
+        if (res.status === 429) {
+          return { status: "limite_temporario", message: "Limite temporário de requisições (429)" };
+        }
+        if (res.status === 401) {
+          return { status: "invalida", message: "Chave inválida ou revogada (Erro 401)" };
+        }
+        return { status: "erro", message: `Erro HTTP ${res.status}` };
+      } catch (err) {
+        return {
+          status: "erro",
+          message: err instanceof Error ? err.message : "Falha de conexão",
+        };
+      }
+    };
+
+    // 1. Testa chaves do Servidor (.env)
+    const serverKeyList = getServerKeysList();
+    const serverKeysRaw = getApiKeys([]);
+    const testedServerKeys: KeyHealthDetail[] = [];
+
+    for (let i = 0; i < serverKeyList.length; i++) {
+      const sInfo = serverKeyList[i];
+      const sRaw = serverKeysRaw[i];
+      if (sRaw) {
+        const testRes = await testKeyDirect(sRaw.key, sInfo.provider);
+        testedServerKeys.push({
+          id: sInfo.id,
+          name: sInfo.name,
+          isServer: true,
+          maskedKey: sInfo.maskedKey,
+          provider: sInfo.provider,
+          status: testRes.status,
+          message: testRes.message,
+          testedAt: checkedAt,
+        });
+      }
+    }
+
+    // 2. Testa chaves do Usuário
+    const testedUserKeys: KeyHealthDetail[] = [];
+    for (const uk of clientUserKeys) {
+      const provider = uk.key.startsWith("AIzaSy") ? "gemini_direct" : "lovable";
+      const maskedKey = `${uk.key.slice(0, 8)}...${uk.key.slice(-6)}`;
+      const testRes = await testKeyDirect(uk.key, provider);
+      testedUserKeys.push({
+        id: uk.id,
+        name: uk.name || `Chave (${maskedKey})`,
+        isServer: false,
+        maskedKey,
+        provider,
+        status: testRes.status,
+        message: testRes.message,
+        testedAt: checkedAt,
+        enabled: uk.enabled !== false,
+      });
+    }
+
+    // 3. Determina status global e qual chave está ativa
+    let activeLabel = "Nenhuma chave ativa";
+    let workingCount = 0;
+
+    const allKeysCombined = [
+      ...testedUserKeys.filter((k) => k.enabled !== false),
+      ...testedServerKeys,
+    ];
+
+    const workingKeys = allKeysCombined.filter((k) => k.status === "ok");
+    workingCount = workingKeys.length;
+
+    let overallStatus: AiStatus = "indisponivel";
+    let overallMessage = "";
+
+    if (selectedKeyId !== "auto") {
+      // Modo manual
+      const selected =
+        testedUserKeys.find((k) => k.id === selectedKeyId) ||
+        testedServerKeys.find((k) => k.id === selectedKeyId);
+
+      if (selected) {
+        activeLabel = `Manual: ${selected.name}`;
+        if (selected.status === "ok") {
+          overallStatus = "ok";
+          overallMessage = `Chave manual ativa: ${selected.name} (Pronta para uso)`;
+        } else if (selected.status === "sem_creditos") {
+          overallStatus = "sem_creditos";
+          overallMessage = `Chave manual ${selected.name} está SEM CRÉDITOS. Selecione outra chave ou use o modo Automático.`;
+        } else if (selected.status === "limite_temporario") {
+          overallStatus = "limite_temporario";
+          overallMessage = `Chave manual ${selected.name} em limite temporário (429).`;
+        } else {
+          overallStatus = "indisponivel";
+          overallMessage = `Chave manual ${selected.name} indisponível (${selected.message}).`;
+        }
+      } else {
+        overallStatus = "indisponivel";
+        overallMessage = "A chave selecionada manualmente não foi encontrada.";
+      }
+    } else {
+      // Modo automático
+      if (workingKeys.length > 0) {
+        overallStatus = "ok";
+        activeLabel = `Auto: ${workingKeys[0].name}`;
+        overallMessage = `Modo Automático ativo (${workingKeys.length} chave(s) operando com créditos e fallback).`;
+      } else {
+        const hasSemCreditos = allKeysCombined.some((k) => k.status === "sem_creditos");
+        if (hasSemCreditos) {
+          overallStatus = "sem_creditos";
+          overallMessage = "Todas as chaves cadastradas estão com CRÉDITOS ESGOTADOS. Adicione uma nova chave para continuar.";
+        } else {
+          overallStatus = "indisponivel";
+          overallMessage = "Nenhuma chave de IA está funcionando no momento. Adicione uma chave válida.";
+        }
+      }
+    }
+
+    return {
+      overallStatus,
+      overallMessage,
+      selectedKeyId,
+      activeKeyLabel: activeLabel,
+      serverKeys: testedServerKeys,
+      userKeys: testedUserKeys,
+      totalAvailableKeys: allKeysCombined.length,
+      totalWorkingKeys: workingCount,
+      checkedAt,
+    };
+  });
+
+/**
+ * Verificação rápida de saúde
  */
 export const checkAiStatus = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
@@ -52,7 +259,8 @@ export const checkAiStatus = createServerFn({ method: "POST" })
     for (let i = 0; i < pool.length; i++) {
       const entry = pool[i];
       try {
-        const testModel = entry.provider === "gemini_direct" ? "gemini-2.5-flash" : "google/gemini-3.7-flash";
+        const testModel =
+          entry.provider === "gemini_direct" ? "gemini-2.5-flash" : "google/gemini-3.7-flash";
         const res = await fetch(`${entry.baseUrl}/chat/completions`, {
           method: "POST",
           headers: { Authorization: `Bearer ${entry.key}`, "Content-Type": "application/json" },
@@ -98,5 +306,6 @@ export const checkAiStatus = createServerFn({ method: "POST" })
       userKeysCount: customKeys.length,
     };
   });
+
 
 

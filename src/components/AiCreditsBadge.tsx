@@ -1,64 +1,58 @@
 import { useCallback, useEffect, useState } from "react";
 import {
-  Activity,
-  Check,
   ChevronDown,
-  Info,
   Key,
-  Loader2,
   RefreshCw,
-  Sliders,
   Sparkles,
   Zap,
+  SlidersHorizontal,
+  CheckCircle2,
+  AlertTriangle,
+  XCircle,
 } from "lucide-react";
-import { checkAiStatus, type AiStatusResult } from "@/lib/ai/credits.functions";
-import { getUserApiKeys } from "@/lib/ai/user-keys";
-import { AiKeyManagerModal } from "@/components/AiKeyManagerModal";
 import {
-  getMonthlyQuota,
-  setMonthlyQuota,
-  usageSummary,
-  type UsageSummary,
-} from "@/lib/usage";
-import { Progress } from "@/components/ui/progress";
+  checkDetailedAiHealthServer,
+  type DetailedAiHealthResult,
+} from "@/lib/ai/credits.functions";
+import {
+  getStoredUserKeysConfig,
+  type UserKeysStorage,
+} from "@/lib/ai/user-keys";
+import { AiKeyManagerModal } from "@/components/AiKeyManagerModal";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-
-const DOT: Record<AiStatusResult["status"], string> = {
-  ok: "bg-emerald-500",
-  sem_creditos: "bg-rose-500",
-  limite_temporario: "bg-amber-500",
-  indisponivel: "bg-muted-foreground",
-};
-
-const STATUS_TEXT: Record<AiStatusResult["status"], string> = {
-  ok: "IA Online",
-  sem_creditos: "Sem Créditos",
-  limite_temporario: "Limite Atingido",
-  indisponivel: "Indisponível",
-};
 
 export function AiCreditsBadge() {
-  const [state, setState] = useState<AiStatusResult | null>(null);
+  const [health, setHealth] = useState<DetailedAiHealthResult | null>(null);
   const [loading, setLoading] = useState(false);
-  const [usage, setUsage] = useState<UsageSummary>(usageSummary());
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [keyModalOpen, setKeyModalOpen] = useState(false);
-  const [customQuota, setCustomQuota] = useState<number>(getMonthlyQuota());
+  const [config, setConfig] = useState<UserKeysStorage>({ selectedKeyId: "auto", keys: [] });
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      setState(
-        await checkAiStatus({
-          data: { customKeys: getUserApiKeys() },
-        }),
-      );
+      const currentConfig = getStoredUserKeysConfig();
+      setConfig(currentConfig);
+
+      const res = await checkDetailedAiHealthServer({
+        data: {
+          userKeys: currentConfig.keys.map((k) => ({
+            id: k.id,
+            key: k.key,
+            name: k.name,
+            enabled: k.enabled,
+          })),
+          selectedKeyId: currentConfig.selectedKeyId,
+        },
+      });
+      setHealth(res);
+    } catch (err) {
+      console.error("Erro ao verificar saúde das chaves de IA:", err);
     } finally {
       setLoading(false);
     }
@@ -67,240 +61,186 @@ export function AiCreditsBadge() {
   useEffect(() => {
     void refresh();
     const sync = () => {
-      setUsage(usageSummary());
-      setCustomQuota(getMonthlyQuota());
+      setConfig(getStoredUserKeysConfig());
       void refresh();
     };
-    sync();
-    window.addEventListener("af:usage", sync);
     window.addEventListener("af:keys-updated", sync);
     return () => {
-      window.removeEventListener("af:usage", sync);
       window.removeEventListener("af:keys-updated", sync);
     };
   }, [refresh]);
 
+  const isAuto = config.selectedKeyId === "auto";
 
-  const handleSaveQuota = () => {
-    setMonthlyQuota(customQuota);
-    setPopoverOpen(false);
+  const getStatusColor = () => {
+    if (!health) return "bg-muted-foreground";
+    if (health.overallStatus === "ok") return "bg-emerald-500";
+    if (health.overallStatus === "sem_creditos") return "bg-rose-500";
+    if (health.overallStatus === "limite_temporario") return "bg-amber-500";
+    return "bg-neutral-500";
   };
 
-  // Cores dinâmicas da barra de progresso baseadas na porcentagem usada
-  const getProgressColorClass = () => {
-    if (state?.status === "sem_creditos" || usage.porcentagemUsada >= 90) {
-      return "bg-rose-500";
+  const getStatusText = () => {
+    if (!health) return "Verificando IA...";
+    if (health.overallStatus === "ok") {
+      return isAuto
+        ? `IA: Auto (${health.totalWorkingKeys} chave${health.totalWorkingKeys > 1 ? "s" : ""})`
+        : `IA: ${health.activeKeyLabel.replace("Manual: ", "")}`;
     }
-    if (usage.porcentagemUsada >= 50) {
-      return "bg-amber-500";
-    }
-    return "bg-emerald-500";
+    if (health.overallStatus === "sem_creditos") return "IA: Créditos Esgotados";
+    if (health.overallStatus === "limite_temporario") return "IA: Limite 429";
+    return "IA: Desconectada";
   };
 
-  const getTextColorClass = () => {
-    if (state?.status === "sem_creditos" || usage.porcentagemUsada >= 90) {
-      return "text-rose-600 dark:text-rose-400";
+  const getBadgeClass = () => {
+    if (!health) return "border-border/80 text-muted-foreground bg-card/90";
+    if (health.overallStatus === "ok") {
+      return "border-emerald-500/30 text-emerald-900 dark:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15";
     }
-    if (usage.porcentagemUsada >= 50) {
-      return "text-amber-600 dark:text-amber-400";
+    if (health.overallStatus === "sem_creditos") {
+      return "border-rose-500/40 text-rose-700 dark:text-rose-300 bg-rose-500/10 hover:bg-rose-500/15";
     }
-    return "text-emerald-600 dark:text-emerald-400";
+    if (health.overallStatus === "limite_temporario") {
+      return "border-amber-500/40 text-amber-800 dark:text-amber-300 bg-amber-500/10 hover:bg-amber-500/15";
+    }
+    return "border-border/80 text-muted-foreground bg-card/90";
   };
 
   return (
-    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-      <PopoverTrigger asChild>
-        <button
-          className="group rounded-xl border border-border/80 bg-card/90 shadow-xs transition-all hover:border-primary/40 hover:bg-accent/40 focus:outline-hidden"
-          title="Clique para ver detalhes do consumo de IA"
-        >
-          {/* Mobile View (< sm): Pílula compacta */}
-          <div className="flex sm:hidden items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold">
-            <span
-              className={`size-2 rounded-full shadow-xs shrink-0 transition-colors ${
-                state ? DOT[state.status] : "bg-muted-foreground"
-              }`}
-            />
-            <span className={`font-mono text-xs font-bold ${getTextColorClass()}`}>
-              {usage.porcentagemUsada}%
+    <>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className={`group flex items-center gap-2 rounded-2xl border px-3 py-1.5 text-xs font-semibold shadow-xs transition-all active:scale-95 focus:outline-hidden ${getBadgeClass()}`}
+            title="Clique para gerenciar chaves e provedor de IA"
+          >
+            <span className={`size-2 rounded-full shadow-xs shrink-0 transition-colors ${getStatusColor()} ${health?.overallStatus === "ok" ? "animate-pulse" : ""}`} />
+            
+            <span className="truncate max-w-[140px] sm:max-w-[200px]">
+              {getStatusText()}
             </span>
-            <span className="text-[10px] text-muted-foreground font-normal">IA</span>
-            <ChevronDown className="size-3 text-muted-foreground opacity-60" />
-          </div>
 
-          {/* Desktop View (>= sm): Card com barra de progresso */}
-          <div className="hidden sm:flex flex-col items-start gap-1.5 px-3.5 py-2 text-left">
-            {/* Linha 1: Status + Porcentagem */}
-            <div className="flex w-full items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-1.5 font-medium">
-                <span
-                  className={`size-2 rounded-full shadow-xs transition-colors ${
-                    state ? DOT[state.status] : "bg-muted-foreground"
-                  }`}
+            <ChevronDown className="size-3 text-muted-foreground opacity-60 transition-transform group-hover:translate-y-0.5" />
+          </button>
+        </PopoverTrigger>
+
+        <PopoverContent className="w-80 sm:w-96 p-4 rounded-3xl shadow-2xl border border-border/80 bg-card/95 backdrop-blur-2xl" align="end">
+          <div className="space-y-3.5">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-border pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="flex size-7 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Key className="size-3.5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-foreground">
+                    Status e Chaves de IA
+                  </h4>
+                  <p className="text-[10px] text-muted-foreground">
+                    {isAuto ? "Modo Automático Ativo" : "Chave Manual Fixada"}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => void refresh()}
+                disabled={loading}
+                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                title="Testar conexão das chaves"
+              >
+                <RefreshCw
+                  className={`size-3.5 ${loading ? "animate-spin text-primary" : ""}`}
                 />
-                <span className="text-foreground">
-                  {state ? STATUS_TEXT[state.status] : "Verificando..."}
+              </button>
+            </div>
+
+            {/* Status Principal */}
+            <div className="rounded-2xl border border-border/70 bg-muted/30 p-3 space-y-1.5">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-semibold text-foreground flex items-center gap-1.5">
+                  {health?.overallStatus === "ok" ? (
+                    <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+                  ) : health?.overallStatus === "sem_creditos" ? (
+                    <XCircle className="size-4 text-rose-500 shrink-0" />
+                  ) : (
+                    <AlertTriangle className="size-4 text-amber-500 shrink-0" />
+                  )}
+                  {health?.overallStatus === "ok" ? "Pronto para Gerar Anúncios" : health?.overallStatus === "sem_creditos" ? "Sem Créditos de IA" : "Atenção na Conexão"}
+                </span>
+
+                <span className="text-[10px] font-bold text-muted-foreground">
+                  {isAuto ? "Fallback Automático" : "Manual"}
                 </span>
               </div>
 
-              <div className="flex items-center gap-1">
-                <span className={`font-mono text-xs font-bold ${getTextColorClass()}`}>
-                  {usage.porcentagemUsada}%
-                </span>
-                <span className="text-[10px] text-muted-foreground">usado</span>
-                <ChevronDown className="size-3 text-muted-foreground transition-transform group-hover:translate-y-0.5" />
-              </div>
+              <p className="text-[11px] text-muted-foreground leading-relaxed">
+                {health?.overallMessage || "Verificando disponibilidade das chaves de API..."}
+              </p>
             </div>
 
-            {/* Linha 2: Barra de Progresso Visual */}
-            <div className="relative h-1.5 w-full min-w-[140px] overflow-hidden rounded-full bg-muted">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${getProgressColorClass()}`}
-                style={{ width: `${Math.max(4, usage.porcentagemUsada)}%` }}
-              />
-            </div>
-
-            {/* Linha 3: Resumo rápido */}
-            <div className="flex w-full items-center justify-between text-[10px] text-muted-foreground">
-              <span>Hoje: {usage.hojeTexto} ads · {usage.hojeImagem} img</span>
-              <span>Restam ~{usage.restante}</span>
-            </div>
-          </div>
-        </button>
-      </PopoverTrigger>
-
-      <PopoverContent className="w-80 p-4 shadow-lg" align="end">
-        <div className="space-y-3.5">
-          <div className="flex items-center justify-between border-b border-border pb-2.5">
-            <div className="flex items-center gap-2">
-              <Activity className="size-4 text-primary" />
-              <h4 className="text-sm font-semibold text-foreground">
-                Monitor de Consumo da IA
-              </h4>
-            </div>
-            <button
-              onClick={() => void refresh()}
-              disabled={loading}
-              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-              title="Recarregar status da API"
-            >
-              <RefreshCw
-                className={`size-3.5 ${loading ? "animate-spin text-primary" : ""}`}
-              />
-            </button>
-          </div>
-
-          {/* Barra de Progresso em Destaque */}
-          <div className="rounded-xl border border-border/70 bg-muted/40 p-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-foreground">Uso da Quota Mensal</span>
-              <span className={`font-mono font-bold ${getTextColorClass()}`}>
-                {usage.porcentagemUsada}%
+            {/* Resumo das Chaves Cadastradas */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Chaves Cadastradas ({health?.serverKeys.length ? 1 : 0} Servidor + {config.keys.length} Suas)
               </span>
-            </div>
 
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
-              <div
-                className={`h-full rounded-full transition-all duration-500 ${getProgressColorClass()}`}
-                style={{ width: `${Math.max(3, usage.porcentagemUsada)}%` }}
-              />
-            </div>
+              <div className="space-y-1 max-h-36 overflow-y-auto no-scrollbar">
+                {/* Servidor */}
+                {health?.serverKeys.map((sk) => (
+                  <div key={sk.id} className="flex items-center justify-between p-2 rounded-xl bg-card border border-border/60 text-xs">
+                    <div className="flex items-center gap-2 truncate">
+                      <span className={`size-1.5 rounded-full shrink-0 ${sk.status === "ok" ? "bg-emerald-500" : "bg-rose-500"}`} />
+                      <span className="font-medium text-foreground truncate">{sk.name}</span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-muted-foreground shrink-0">
+                      {sk.status === "ok" ? "OK" : "Esgotada (402)"}
+                    </span>
+                  </div>
+                ))}
 
-            <div className="mt-2 flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>{Math.round(usage.totalOperacoesMes)} geradas no mês</span>
-              <span>Meta: {usage.limiteMensal} operações</span>
-            </div>
-          </div>
+                {/* Usuário */}
+                {config.keys.map((uk) => {
+                  const tested = health?.userKeys.find((k) => k.id === uk.id);
+                  const isOk = tested ? tested.status === "ok" : uk.lastStatus === "ok";
+                  const isExhausted = tested ? tested.status === "sem_creditos" : uk.lastStatus === "sem_creditos";
 
-          {/* Estatísticas detalhadas */}
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-lg border border-border bg-card p-2.5">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Hoje
-              </span>
-              <div className="mt-1 space-y-0.5">
-                <p className="font-medium text-foreground">{usage.hojeTexto} Anúncios</p>
-                <p className="text-[11px] text-muted-foreground">{usage.hojeImagem} Imagens</p>
+                  return (
+                    <div key={uk.id} className="flex items-center justify-between p-2 rounded-xl bg-card border border-border/60 text-xs">
+                      <div className="flex items-center gap-2 truncate">
+                        <span className={`size-1.5 rounded-full shrink-0 ${isOk ? "bg-emerald-500" : isExhausted ? "bg-rose-500" : "bg-amber-500"}`} />
+                        <span className="font-medium text-foreground truncate">{uk.name}</span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-muted-foreground shrink-0">
+                        {isOk ? "OK" : isExhausted ? "Sem Créditos" : "Limite"}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="rounded-lg border border-border bg-card p-2.5">
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Este Mês
-              </span>
-              <div className="mt-1 space-y-0.5">
-                <p className="font-medium text-foreground">{usage.mesTexto} Anúncios</p>
-                <p className="text-[11px] text-muted-foreground">{usage.mesImagem} Imagens</p>
-              </div>
+            {/* Botão de Ação: Abrir Gerenciador de Chaves */}
+            <div className="border-t border-border/80 pt-2.5">
+              <Button
+                type="button"
+                onClick={() => {
+                  setPopoverOpen(false);
+                  setKeyModalOpen(true);
+                }}
+                className="w-full justify-center gap-2 rounded-2xl text-xs font-bold h-9 shadow-md"
+              >
+                <SlidersHorizontal className="size-3.5" />
+                <span>Gerenciar, Renomear e Alternar Chaves</span>
+              </Button>
             </div>
           </div>
-
-          {state && (
-            <div className="rounded-lg bg-muted/50 p-2.5 text-[11px] text-muted-foreground space-y-1">
-              <div className="flex items-center justify-between text-foreground font-medium">
-                <span className="flex items-center gap-1.5">
-                  <Zap className="size-3 text-primary" />
-                  {state.totalKeys && state.totalKeys > 1
-                    ? `Pool Ativo (${state.totalKeys} Chaves)`
-                    : "Chave Ativa"}
-                </span>
-                {state.activeKeyId && (
-                  <span className="font-mono text-[10px] bg-background/80 px-1.5 py-0.5 rounded border border-border">
-                    {state.activeKeyId}
-                  </span>
-                )}
-              </div>
-              <p className="text-[10px] text-muted-foreground">{state.message}</p>
-            </div>
-          )}
-
-          {/* Botão de Gerenciamento de Chaves de IA */}
-          <div className="border-t border-border pt-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setPopoverOpen(false);
-                setKeyModalOpen(true);
-              }}
-              className="w-full justify-center gap-2 rounded-xl text-xs font-semibold h-8 border-primary/30 hover:bg-primary/10 hover:text-primary transition-all"
-            >
-              <Key className="size-3.5 text-primary" />
-              <span>Gerenciar Chaves de API de IA</span>
-            </Button>
-          </div>
-
-          {/* Ajuste do Limite / Quota Estimada */}
-          <div className="border-t border-border pt-3">
-            <div className="flex items-center justify-between gap-2">
-              <label htmlFor="quotaInput" className="text-[11px] font-medium text-muted-foreground">
-                Ajustar quota de controle (mês):
-              </label>
-              <div className="flex items-center gap-1.5">
-                <Input
-                  id="quotaInput"
-                  type="number"
-                  min="5"
-                  max="1000"
-                  value={customQuota}
-                  onChange={(e) => setCustomQuota(Number(e.target.value))}
-                  className="h-7 w-16 px-2 text-right font-mono text-xs"
-                />
-                <Button size="sm" variant="secondary" className="h-7 px-2 text-xs" onClick={handleSaveQuota}>
-                  <Check className="size-3" />
-                </Button>
-              </div>
-            </div>
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              Fallback automático habilitado para todas as chaves cadastradas.
-            </p>
-          </div>
-        </div>
-      </PopoverContent>
+        </PopoverContent>
+      </Popover>
 
       <AiKeyManagerModal open={keyModalOpen} onOpenChange={setKeyModalOpen} />
-    </Popover>
+    </>
   );
 }
+
 

@@ -57,14 +57,34 @@ export function getApiKeys(customKeys?: string[]): KeyEntry[] {
   }
 
   // 3. Chaves Google Gemini Direct do servidor (.env)
-  addKey(process.env["GEMINI_API_KEY"], "gemini_direct");
-  addKey(process.env["GEMINI_API_KEYS"], "gemini_direct");
   for (let i = 1; i <= 10; i++) {
     addKey(process.env[`GEMINI_API_KEY_${i}`], "gemini_direct");
   }
 
   return keys;
 }
+
+export interface ServerKeyInfo {
+
+
+  id: string;
+  name: string;
+  maskedKey: string;
+  provider: "lovable" | "gemini_direct";
+  isServer: true;
+}
+
+export function getServerKeysList(): ServerKeyInfo[] {
+  const serverEntries = getApiKeys([]);
+  return serverEntries.map((entry, index) => ({
+    id: `server_${index}`,
+    name: index === 0 ? "Chave Principal do App (.env)" : `Chave do Servidor ${index + 1}`,
+    maskedKey: `${entry.key.slice(0, 8)}...${entry.key.slice(-6)}`,
+    provider: entry.provider,
+    isServer: true as const,
+  }));
+}
+
 
 /**
  * Testa uma chave específica para verificar se ela é válida e tem créditos.
