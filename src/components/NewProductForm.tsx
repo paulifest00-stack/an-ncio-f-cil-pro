@@ -44,6 +44,7 @@ export function NewProductForm({
 }) {
   const [photo, setPhoto] = useState<string | null>(null);
   const [basicName, setBasicName] = useState("");
+  const [mode, setMode] = useState<"tudo" | "ml" | "bling">("tudo");
   const [isKitMode, setIsKitMode] = useState(false);
   const [kitQuantity, setKitQuantity] = useState<number>(1);
   const [isCustomKit, setIsCustomKit] = useState(false);
