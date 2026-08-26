@@ -75,26 +75,26 @@ function Index() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background via-background/95 to-muted/20 px-3 pb-16 pt-3 sm:px-6 sm:pt-6">
+    <main className="min-h-screen w-full max-w-full overflow-x-hidden bg-gradient-to-b from-background via-background/95 to-muted/20 px-2 sm:px-6 pb-16 pt-2 sm:pt-6">
       {/* Barra de Topo iOS 18 Frosted Glass */}
-      <header className="sticky top-2 sm:top-4 z-40 mx-auto mb-5 sm:mb-8 flex w-full max-w-4xl items-center justify-between gap-2 rounded-2xl border border-border/70 bg-card/85 px-3 py-2 shadow-lg backdrop-blur-2xl transition-all sm:px-5 sm:py-2.5">
+      <header className="sticky top-2 sm:top-4 z-40 mx-auto mb-4 sm:mb-8 flex w-full max-w-4xl items-center justify-between gap-1.5 sm:gap-2 rounded-2xl border border-border/70 bg-card/85 px-2.5 py-1.5 sm:px-5 sm:py-2.5 shadow-lg backdrop-blur-2xl transition-all">
         {/* Marca / Logo MARKET AI */}
         <button
           type="button"
           onClick={() => setStage("form")}
-          className="flex items-center gap-2.5 text-left transition-transform active:scale-95 shrink-0 group"
+          className="flex items-center gap-2 sm:gap-2.5 text-left transition-transform active:scale-95 shrink-0 group min-w-0"
         >
           <img
             src="/logo-market-ai.jpg"
             alt="MARKET AI"
-            className="size-8 sm:size-9 rounded-xl shadow-md border border-border/80 object-cover bg-white shrink-0 group-hover:scale-105 transition-transform"
+            className="size-7 sm:size-9 rounded-xl shadow-xs border border-border/80 object-cover bg-white shrink-0 group-hover:scale-105 transition-transform"
           />
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-1">
-              <span className="text-xs sm:text-sm font-black tracking-tight text-foreground">
+              <span className="text-xs sm:text-sm font-black tracking-tight text-foreground whitespace-nowrap">
                 MARKET <span className="text-[#F5A623]">AI</span>
               </span>
-              <span className="rounded-md bg-[#F5A623]/15 px-1.5 py-0.2 text-[9px] sm:text-[10px] font-black text-[#D97706] dark:text-[#FBBF24]">
+              <span className="rounded-md bg-[#F5A623]/15 px-1 py-0.2 text-[9px] sm:text-[10px] font-black text-[#D97706] dark:text-[#FBBF24]">
                 PRO
               </span>
             </div>
@@ -104,13 +104,13 @@ function Index() {
           </div>
         </button>
 
-
         {/* Ações da Direita: Meus Anúncios (Supabase) + Badge de Créditos */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <RecentListings onSelect={handleSelectSaved} />
           <AiCreditsBadge />
         </div>
       </header>
+
 
       {/* Conteúdo Principal com Transição Fluida iOS */}
       <div className="mx-auto w-full max-w-4xl">

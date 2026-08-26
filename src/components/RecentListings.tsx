@@ -190,18 +190,18 @@ export function RecentListings({ onSelect }: RecentListingsProps) {
         <Button
           variant="outline"
           size="sm"
-          className="gap-1.5 px-2.5 sm:px-3 sm:gap-2 rounded-xl text-xs font-medium border-border/80 bg-card hover:border-primary/40 hover:bg-accent/40"
+          className="gap-1 sm:gap-2 px-2 sm:px-3 h-7 sm:h-8 rounded-2xl text-xs font-medium border-border/80 bg-card hover:border-primary/40 hover:bg-accent/40 shrink-0"
           title="Ver todos os seus anúncios salvos"
         >
           <History className="size-3.5 text-primary shrink-0" />
           <span className="hidden sm:inline">Meus Anúncios</span>
-          <span className="inline sm:hidden">Salvos</span>
           {items.length > 0 && (
             <Badge variant="secondary" className="px-1.5 py-0 text-[10px] font-mono">
               {items.length}
             </Badge>
           )}
         </Button>
+
       </SheetTrigger>
 
       <SheetContent side="right" className="w-full sm:max-w-md">

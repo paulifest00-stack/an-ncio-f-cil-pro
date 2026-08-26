@@ -329,10 +329,11 @@ export function ProductDashboard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring", duration: 0.35, bounce: 0 }}
-      className="mx-auto w-full max-w-4xl space-y-5"
+      className="mx-auto w-full max-w-full space-y-4 sm:space-y-5 overflow-x-hidden"
     >
       {/* 1. Header do Produto Estilo iOS Frosted Card */}
-      <div className="overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-4 shadow-xl backdrop-blur-2xl sm:p-6">
+      <div className="overflow-hidden rounded-3xl border border-border/80 bg-card/90 p-3.5 sm:p-6 shadow-xl backdrop-blur-2xl">
+
         <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start sm:items-center gap-3 sm:gap-4">
             <div className="relative shrink-0">

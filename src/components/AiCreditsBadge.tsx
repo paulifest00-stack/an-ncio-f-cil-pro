@@ -92,6 +92,14 @@ export function AiCreditsBadge() {
     return "IA: Desconectada";
   };
 
+  const getMobileStatusText = () => {
+    if (!health) return "...";
+    if (health.overallStatus === "ok") return isAuto ? "Auto" : "Fixa";
+    if (health.overallStatus === "sem_creditos") return "402";
+    if (health.overallStatus === "limite_temporario") return "429";
+    return "Off";
+  };
+
   const getBadgeClass = () => {
     if (!health) return "border-border/80 text-muted-foreground bg-card/90";
     if (health.overallStatus === "ok") {
@@ -112,18 +120,25 @@ export function AiCreditsBadge() {
         <PopoverTrigger asChild>
           <button
             type="button"
-            className={`group flex items-center gap-2 rounded-2xl border px-3 py-1.5 text-xs font-semibold shadow-xs transition-all active:scale-95 focus:outline-hidden ${getBadgeClass()}`}
+            className={`group flex items-center gap-1 sm:gap-2 rounded-2xl border px-2 sm:px-3 py-1 sm:py-1.5 text-xs font-semibold shadow-xs transition-all active:scale-95 focus:outline-hidden shrink-0 ${getBadgeClass()}`}
             title="Clique para gerenciar chaves e provedor de IA"
           >
-            <span className={`size-2 rounded-full shadow-xs shrink-0 transition-colors ${getStatusColor()} ${health?.overallStatus === "ok" ? "animate-pulse" : ""}`} />
+            <span className={`size-1.5 sm:size-2 rounded-full shadow-xs shrink-0 transition-colors ${getStatusColor()} ${health?.overallStatus === "ok" ? "animate-pulse" : ""}`} />
             
-            <span className="truncate max-w-[140px] sm:max-w-[200px]">
+            {/* Desktop label */}
+            <span className="hidden sm:inline truncate max-w-[180px]">
               {getStatusText()}
             </span>
 
-            <ChevronDown className="size-3 text-muted-foreground opacity-60 transition-transform group-hover:translate-y-0.5" />
+            {/* Mobile compact label */}
+            <span className="inline sm:hidden font-mono text-[10px] font-bold">
+              IA: {getMobileStatusText()}
+            </span>
+
+            <ChevronDown className="size-2.5 sm:size-3 text-muted-foreground opacity-60 transition-transform group-hover:translate-y-0.5" />
           </button>
         </PopoverTrigger>
+
 
         <PopoverContent className="w-80 sm:w-96 p-4 rounded-3xl shadow-2xl border border-border/80 bg-card/95 backdrop-blur-2xl" align="end">
           <div className="space-y-3.5">

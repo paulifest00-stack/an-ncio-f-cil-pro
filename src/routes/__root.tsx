@@ -80,6 +80,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "MARKET AI — Gerador de Anúncios & Catálogo PRO (Mercado Livre & Bling)" },
       { name: "description", content: "MARKET AI: Crie anúncios de alta conversão para Mercado Livre e Bling com fotos 1:1 em fundo branco, quebra de objeções, SKUs padronizados e classificação fiscal NCM/EAN-13." },
       { name: "author", content: "MARKET AI" },
+      { name: "theme-color", content: "#152238" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "MARKET AI" },
+      { name: "application-name", content: "MARKET AI" },
       { property: "og:title", content: "MARKET AI — Gerador Inteligente de Anúncios para Marketplace" },
       { property: "og:description", content: "Fotos 1:1 com fundo branco, arte de quebra de objeções, SKUs padronizados e EAN-13 para marketplace." },
       { property: "og:image", content: "/logo-market-ai.jpg" },
@@ -92,10 +98,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
+
 
   }),
   shellComponent: RootShell,
@@ -164,9 +172,22 @@ function RootComponent() {
       removeLovableBadge();
     });
 
+    // Registra o Service Worker do PWA para permitir instalação nativa
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          console.log("[PWA] Service Worker registrado com sucesso:", reg.scope);
+        })
+        .catch((err) => {
+          console.warn("[PWA] Erro ao registrar Service Worker:", err);
+        });
+    }
+
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
+
 
   return (
     <QueryClientProvider client={queryClient}>
