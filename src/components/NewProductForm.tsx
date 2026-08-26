@@ -596,6 +596,40 @@ export function NewProductForm({
               </AnimatePresence>
             </div>
 
+            {/* Seletor de Destino: evita gastar IA à toa */}
+            <div className="rounded-2xl border border-border/80 bg-muted/20 p-2.5 sm:p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Target className="size-3.5 text-primary" />
+                  Cadastrar onde?
+                </span>
+
+                <div className="flex items-center rounded-xl bg-background border border-border/80 p-0.5">
+                  {([
+                    { id: "tudo", label: "Tudo" },
+                    { id: "ml", label: "Só ML" },
+                    { id: "bling", label: "Só Bling" },
+                  ] as const).map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMode(m.id)}
+                      className={`px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all ${
+                        mode === m.id
+                          ? "bg-primary text-white shadow-xs"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Escolha <strong>Só Bling</strong> ou <strong>Só ML</strong> para esconder as abas que não vai usar.
+              </p>
+            </div>
+
             {error && (
               <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-2.5 text-xs font-medium text-destructive">
                 {error}
