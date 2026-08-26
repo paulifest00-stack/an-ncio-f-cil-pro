@@ -66,6 +66,7 @@ export function NewProductForm({
         const parsed = JSON.parse(savedDraft);
         if (parsed.basicName) setBasicName(parsed.basicName);
         if (parsed.photo) setPhoto(parsed.photo);
+        if (parsed.mode) setMode(parsed.mode);
         if (parsed.isKitMode) setIsKitMode(parsed.isKitMode);
         if (parsed.kitQuantity) setKitQuantity(parsed.kitQuantity);
         if (parsed.optional) setOptional(parsed.optional);
