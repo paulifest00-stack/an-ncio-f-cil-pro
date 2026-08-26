@@ -7,7 +7,9 @@ import {
   Layers,
   Loader2,
   PackagePlus,
+  ShoppingBag,
   Sparkles,
+  Target,
   Wand2,
   Zap,
 } from "lucide-react";
@@ -42,6 +44,7 @@ export function NewProductForm({
 }) {
   const [photo, setPhoto] = useState<string | null>(null);
   const [basicName, setBasicName] = useState("");
+  const [mode, setMode] = useState<"tudo" | "ml" | "bling">("tudo");
   const [isKitMode, setIsKitMode] = useState(false);
   const [kitQuantity, setKitQuantity] = useState<number>(1);
   const [isCustomKit, setIsCustomKit] = useState(false);
@@ -63,6 +66,7 @@ export function NewProductForm({
         const parsed = JSON.parse(savedDraft);
         if (parsed.basicName) setBasicName(parsed.basicName);
         if (parsed.photo) setPhoto(parsed.photo);
+        if (parsed.mode) setMode(parsed.mode);
         if (parsed.isKitMode) setIsKitMode(parsed.isKitMode);
         if (parsed.kitQuantity) setKitQuantity(parsed.kitQuantity);
         if (parsed.optional) setOptional(parsed.optional);
@@ -82,6 +86,7 @@ export function NewProductForm({
           JSON.stringify({
             basicName,
             photo,
+            mode,
             isKitMode,
             kitQuantity,
             optional,
@@ -92,7 +97,7 @@ export function NewProductForm({
     } catch {
       // ignore
     }
-  }, [basicName, photo, isKitMode, kitQuantity, optional, cachedIdentificacao]);
+  }, [basicName, photo, mode, isKitMode, kitQuantity, optional, cachedIdentificacao]);
 
   const setField = (key: string, value: string) =>
     setOptional((prev) => ({ ...prev, [key]: value }));
@@ -240,6 +245,7 @@ export function NewProductForm({
       photoDataUrl: photo,
       basicName: basicName.trim(),
       kitQuantity: currentEffectiveKitQty,
+      mode,
       ...optional,
       ...(cachedIdentificacao ? { cachedIdentificacao } : {}),
     });
@@ -588,6 +594,40 @@ export function NewProductForm({
                   </motion.div>
                 )}
               </AnimatePresence>
+            </div>
+
+            {/* Seletor de Destino: evita gastar IA à toa */}
+            <div className="rounded-2xl border border-border/80 bg-muted/20 p-2.5 sm:p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                  <Target className="size-3.5 text-primary" />
+                  Cadastrar onde?
+                </span>
+
+                <div className="flex items-center rounded-xl bg-background border border-border/80 p-0.5">
+                  {([
+                    { id: "tudo", label: "Tudo" },
+                    { id: "ml", label: "Só ML" },
+                    { id: "bling", label: "Só Bling" },
+                  ] as const).map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setMode(m.id)}
+                      className={`px-2 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-lg transition-all ${
+                        mode === m.id
+                          ? "bg-primary text-white shadow-xs"
+                          : "text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Escolha <strong>Só Bling</strong> ou <strong>Só ML</strong> para esconder as abas que não vai usar.
+              </p>
             </div>
 
             {error && (
