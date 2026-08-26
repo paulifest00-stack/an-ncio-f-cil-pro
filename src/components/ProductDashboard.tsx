@@ -57,7 +57,9 @@ import {
 import { getUserApiKeys } from "@/lib/ai/user-keys";
 import { registerUsage } from "@/lib/usage";
 import { formatEan13, generateValidEan13, validateEan13 } from "@/lib/ean";
+import { validarNcmOficial, formatNcm } from "@/lib/ncm";
 import { saveProductToHistory } from "@/components/RecentListings";
+
 
 const SOURCE_LABEL: Record<Field["source"], string> = {
   usuario: "Informado por você",
@@ -1044,9 +1046,29 @@ export function ProductDashboard({
                 {/* NCM */}
                 <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-foreground">
-                      Classificação Fiscal (NCM)
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-foreground">
+                        Classificação Fiscal (NCM)
+                      </span>
+                      {(() => {
+                        const ncmCheck = validarNcmOficial(currentNcm);
+                        if (ncmCheck.valido) {
+                          return (
+                            <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.2 text-[9px] font-bold text-emerald-600 flex items-center gap-1">
+                              <Check className="size-2.5" /> Oficial Siscomex
+                            </span>
+                          );
+                        }
+                        if (currentNcm && currentNcm !== NAO_IDENTIFICADO) {
+                          return (
+                            <span className="rounded-md bg-amber-500/15 px-1.5 py-0.2 text-[9px] font-bold text-amber-600 flex items-center gap-1">
+                              <AlertTriangle className="size-2.5" /> Atenção
+                            </span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                     {currentNcm && (
                       <a
                         href={`https://www.google.com/search?q=tabela+ncm+${encodeURIComponent(currentNcm.replace(/\D/g, ""))}`}
@@ -1065,18 +1087,48 @@ export function ProductDashboard({
                       placeholder="0000.00.00"
                       onChange={(e) => {
                         const val = e.target.value;
+                        const check = validarNcmOficial(val);
                         const updatedFicha = { ...listing.fichaTecnica };
-                        updatedFicha["NCM"] = { value: val, source: "usuario" };
-                        patch({ ncm: val, fichaTecnica: updatedFicha });
+                        updatedFicha["NCM"] = {
+                          value: val,
+                          source: "usuario",
+                          note: check.valido ? `Oficial: ${check.descricaoOficial}` : undefined,
+                        };
+                        patch({
+                          ncm: val,
+                          ncmValidado: check.valido,
+                          ncmDescricaoOficial: check.descricaoOficial,
+                          fichaTecnica: updatedFicha,
+                        });
                       }}
                       className="h-10 rounded-xl font-mono text-xs font-bold bg-background"
                     />
                     {currentNcm && <CopyButton text={currentNcm} />}
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
-                    Código de 8 dígitos para emissão de notas fiscais (NF-e).
-                  </p>
+                  {(() => {
+                    const ncmCheck = validarNcmOficial(currentNcm);
+                    if (ncmCheck.valido && ncmCheck.descricaoOficial) {
+                      return (
+                        <p className="text-[10px] text-emerald-800 dark:text-emerald-300 bg-emerald-500/10 p-2 rounded-lg leading-relaxed font-medium">
+                          ✓ <strong>Siscomex:</strong> {ncmCheck.descricaoOficial}
+                        </p>
+                      );
+                    }
+                    if (ncmCheck.aviso) {
+                      return (
+                        <p className="text-[10px] text-amber-700 dark:text-amber-400 leading-tight">
+                          {ncmCheck.aviso}
+                        </p>
+                      );
+                    }
+                    return (
+                      <p className="text-[10px] text-muted-foreground">
+                        Código de 8 dígitos para emissão de notas fiscais (NF-e).
+                      </p>
+                    );
+                  })()}
                 </div>
+
 
                 {/* EAN-13 */}
                 <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5 space-y-2">

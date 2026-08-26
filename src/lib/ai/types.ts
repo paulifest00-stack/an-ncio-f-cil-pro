@@ -74,8 +74,19 @@ export interface ImagePlan {
   naoConfirmado: string[];
 }
 
+export type ImageType =
+  | "principal"
+  | "objecoes"
+  | "detalhes"
+  | "contexto"
+  | "escala"
+  | "conteudo"
+  | "variacoes"
+  | "festa"
+  | "medidas";
+
 export interface ImageBrief {
-  tipo: "principal" | "objecoes" | "detalhes" | "contexto";
+  tipo: ImageType;
   titulo: string;
   prompt: string;
   observacoes: string;
@@ -98,6 +109,8 @@ export interface Listing {
   tituloMercadoLivre: string;
   kitQuantity?: number;
   ncm?: string;
+  ncmValidado?: boolean;
+  ncmDescricaoOficial?: string;
   ean?: string;
   descricao: string;
   palavrasChave: {
@@ -122,4 +135,5 @@ export type ListingSection =
   | "palavrasChave"
   | "fichaTecnica"
   | "imagens";
+
 

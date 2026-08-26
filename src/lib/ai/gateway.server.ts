@@ -130,6 +130,7 @@ export async function chat(
   messages: ChatMessage[],
   model: string = MODELS.reasoning,
   customKeys?: string[],
+  temperature: number = 0.2,
 ): Promise<string> {
   const pool = getApiKeys(customKeys);
   if (pool.length === 0) {
@@ -151,7 +152,7 @@ export async function chat(
           Authorization: `Bearer ${entry.key}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ model: actualModel, messages, temperature: 0.2 }),
+        body: JSON.stringify({ model: actualModel, messages, temperature }),
       });
 
       if (!res.ok) {
@@ -201,9 +202,11 @@ export async function chatJson<T>(
   messages: ChatMessage[],
   model?: string,
   customKeys?: string[],
+  temperature?: number,
 ): Promise<T> {
-  return parseJson<T>(await chat(messages, model, customKeys));
+  return parseJson<T>(await chat(messages, model, customKeys, temperature));
 }
+
 
 /** Gera/edita uma imagem com fallback de chaves preservando o produto da foto original. */
 export async function generateImage(

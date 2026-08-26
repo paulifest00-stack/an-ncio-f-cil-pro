@@ -191,13 +191,17 @@ Responda SOMENTE com JSON válido neste formato:
   "caracteristicas": ["características REAIS visíveis ou confirmadas"],
   "alertas": ["conflitos entre fontes, informações que precisam ser confirmadas pelo usuário"],
   "imagens": [
-    { "tipo": "principal", "titulo": "Foto Principal (Fundo Branco #FFFFFF)", "prompt": "commercial product photography of the product isolated on a pure seamless white background #FFFFFF, studio lighting, sharp focus, 1:1 square format", "observacoes": "Padrão oficial para primeira foto do Mercado Livre" },
+    { "tipo": "principal", "titulo": "Foto Principal (Fundo Branco #FFFFFF)", "prompt": "commercial product photography of the product isolated on a pure seamless white background #FFFFFF, studio lighting, sharp focus, 1:1 square format, no added text, no watermark, no logo overlay, no fake stock-photo badge", "observacoes": "Padrão oficial para primeira foto do Mercado Livre" },
     { "tipo": "objecoes", "titulo": "Arte de Quebra de Objeções (Infográfico)", "prompt": "infographic commercial advertising banner, square 1:1, crisp vector badges, clean modern layout", "observacoes": "Infográfico com layout e cor de destaque da embalagem" },
-    { "tipo": "detalhes", "titulo": "Foto de Detalhes / Textura / Rótulo", "prompt": "macro detailed photography of the product label, texture and packaging details, studio lighting, crisp 1:1 square", "observacoes": "Destaque de qualidade, bico, tampa ou textura do produto" },
-    { "tipo": "contexto", "titulo": "Foto em Uso / Ambiente Realista", "prompt": "lifestyle commercial advertisement photography of the product in real use context, modern clean setting, professional 1:1 square", "observacoes": "Foto ambientalizada mostrando o produto em uso real" }
+    { "tipo": "detalhes", "titulo": "Foto de Detalhes / Textura / Rótulo", "prompt": "macro detailed photography of the product label, texture and packaging details, studio lighting, crisp 1:1 square, no added text, no watermark, no logo overlay, no fake stock-photo badge", "observacoes": "Destaque de qualidade, bico, tampa ou textura do produto" },
+    { "tipo": "contexto", "titulo": "Foto em Uso / Ambiente Realista", "prompt": "lifestyle commercial advertisement photography of the product in real use context, modern clean setting, professional 1:1 square, no added text, no watermark, no logo overlay, no fake stock-photo badge", "observacoes": "Foto ambientalizada mostrando o produto em uso real" },
+    { "tipo": "escala", "titulo": "Foto com Referência de Tamanho / Proporção", "prompt": "commercial product photography of the product next to a common reference object (ruler or coin) for scale comparison, pure white background #FFFFFF, studio lighting, sharp focus, square 1:1 format, no added text, no watermark, no logo overlay, no fake stock-photo badge", "observacoes": "Referência visual de escala para evitar dúvidas sobre tamanho" },
+    { "tipo": "conteudo", "titulo": "Flat Lay do Conteúdo / Peças da Embalagem", "prompt": "flat lay commercial photography showing all items included in the package neatly arranged, pure white background #FFFFFF, top-down view, studio lighting, square 1:1 format, no added text, no watermark, no logo overlay, no fake stock-photo badge", "observacoes": "Exibição clara de todas as unidades/acessórios inclusos" },
+    { "tipo": "festa", "titulo": "Foto Ambientada em Festa / Decoração de Mesa", "prompt": "lifestyle commercial photography of the product displayed in a festive party table or decoration setting, warm natural lighting, aesthetically pleasing, professional advertising shot, square 1:1 format, no added text, no watermark, no logo overlay, no fake stock-photo badge", "observacoes": "Composição festiva de alta conversão para artigos de festa e confeitaria" }
   ]
 }
 Campos da ficha sem informação: {"value": "Não identificado", "source": "nao_encontrado"}.
+Responda apenas com o JSON válido, sem texto antes ou depois, sem comentários.
 `.trim();
 
 export const IMAGENS_REGRAS = `
@@ -206,7 +210,16 @@ TODAS as imagens são obrigatoriamente QUADRADAS 1:1.
 - principal: produto em fundo branco puro #FFFFFF, luz de estúdio, sombra suave, produto inteiro, centralizado, alta nitidez, padrão catálogo profissional de marketplace.
 - objecoes: arte de quebra de objeções (o layout é definido no PASSO 3) — o prompt aqui deve ser apenas uma linha descrevendo a intenção.
 - detalhes: close real da embalagem/produto, fundo branco, fotografia profissional macro.
-- contexto: única exceção ao fundo branco — produto em uso, cena realista e adequada à finalidade, aparência de fotografia real de publicidade.
+- contexto: produto em uso, cena realista e adequada à finalidade, aparência de fotografia real de publicidade.
+- escala: foto com referência visual de proporção (ao lado de régua, moeda ou objeto cotidiano), sem inventar números na imagem.
+- conteudo: flat lay superior (top-down) em fundo branco exibindo todas as unidades ou peças inclusas no pacote/kit.
+- variacoes: banner comparativo lado a lado das opções de cor/tamanho (gerar apenas quando houver múltiplas variações).
+- festa: produto ambientado em mesa de aniversário, festa ou buffet temático com luz quente natural.
+- medidas: diagrama técnico com setas de dimensões (gerar APENAS se as medidas reais forem confirmadas pelo usuário ou ficha).
+
+Regra de segurança contra marca-d'água: todos os prompts das fotos realistas devem incluir expressamente:
+"no added text, no watermark, no logo overlay, no fake stock-photo badge"
+
 Todos os prompts devem exigir fidelidade total: não alterar embalagem, logotipo, textos, cores, formato, quantidade nem acessórios do produto da foto.
 `.trim();
 
@@ -253,7 +266,7 @@ TÍTULO (3 linhas)
 
 COR DE ACENTO: uma única cor extraída da própria embalagem (dominante do rótulo ou da tampa), em hexadecimal.
 
-Responda SOMENTE com JSON:
+Responda SOMENTE com JSON válido, sem texto antes ou depois, sem comentários:
 {
   "proporcao": 0.0,
   "layout": "A|B|C",
@@ -321,7 +334,9 @@ export function photoImagePrompt(prompt: string): string {
     "",
     "Strict rules: keep the exact product from the reference photo — same packaging, same logo, same printed text, same colors, same shape, same quantity.",
     "Do not add accessories, do not invent labels or text, do not restyle the packaging.",
+    "No added text, no watermark, no logo overlay, no fake stock-photo badge.",
     "Result must look like a real professional product photograph: clean, minimal, sharp, natural studio lighting, no AI-looking artifacts.",
     "ABSOLUTE RULE: the generated image MUST be square, 1:1 aspect ratio, product fully inside the frame with even margins.",
   ].join("\n");
 }
+

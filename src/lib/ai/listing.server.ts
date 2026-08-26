@@ -12,6 +12,7 @@ import {
   photoImagePrompt,
   userDataBlock,
 } from "./prompts.server";
+import { validarNcmOficial, formatNcm } from "../ncm";
 import { generateValidEan13 } from "../ean";
 import { generateMockListing } from "./mock.server";
 import {
@@ -84,14 +85,21 @@ function deduplicateWords(text: string): string {
   return clean.join(" ");
 }
 
-function defaultImagesForProduct(input: ProductInput, name: string): ImageBrief[] {
+function defaultImagesForProduct(
+  input: ProductInput,
+  name: string,
+  raw?: Partial<Listing>,
+): ImageBrief[] {
+
   const prodName = name || input.basicName || "Produto";
   const isKit = Boolean(input.kitQuantity && input.kitQuantity > 1);
   const kitQty = input.kitQuantity || 1;
 
+  const noWatermark = "no added text, no watermark, no logo overlay, no fake stock-photo badge";
+
   const principalPrompt = isKit
-    ? `commercial product photography of a retail kit containing exactly ${kitQty} identical units of ${prodName}, arranged symmetrically and neatly side-by-side on a pure seamless clean white background #FFFFFF, studio lighting, crisp contact shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format`
-    : `commercial product photography of ${prodName}, isolated on a pure seamless clean white background #FFFFFF, studio lighting, soft shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format`;
+    ? `commercial product photography of a retail kit containing exactly ${kitQty} identical units of ${prodName}, arranged symmetrically and neatly side-by-side on a pure seamless clean white background #FFFFFF, studio lighting, crisp contact shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format, ${noWatermark}`
+    : `commercial product photography of ${prodName}, isolated on a pure seamless clean white background #FFFFFF, studio lighting, soft shadows, ultra sharp focus, crisp details, centered composition, square 1:1 format, ${noWatermark}`;
 
   const principalObs = isKit
     ? `Foto Principal do Kit com ${kitQty} unidades agrupadas em Fundo Branco Puro #FFFFFF (Padrão Oficial Mercado Livre)`
@@ -102,14 +110,26 @@ function defaultImagesForProduct(input: ProductInput, name: string): ImageBrief[
     : `commercial advertising infographic banner for ${prodName}, square 1:1, modern clean vector badges with checkmarks, crisp typography, studio lighting`;
 
   const detalhesPrompt = isKit
-    ? `macro close-up photography of ${prodName} pack of ${kitQty} units, highlighting premium materials, label typography and packaging finish, soft studio lighting, sharp textures, square 1:1`
-    : `macro close-up photography of ${prodName}, highlighting premium materials, label typography and packaging finish, soft studio lighting, sharp textures, square 1:1`;
+    ? `macro close-up photography of ${prodName} pack of ${kitQty} units, highlighting premium materials, label typography and packaging finish, soft studio lighting, sharp textures, square 1:1, ${noWatermark}`
+    : `macro close-up photography of ${prodName}, highlighting premium materials, label typography and packaging finish, soft studio lighting, sharp textures, square 1:1, ${noWatermark}`;
 
   const contextoPrompt = isKit
-    ? `lifestyle commercial photography of the ${kitQty}-unit kit of ${prodName} in real everyday usage scenario, aesthetically pleasing background, warm natural lighting, professional advertising shot, square 1:1`
-    : `lifestyle commercial photography of ${prodName} in real everyday usage scenario, aesthetically pleasing background, warm natural lighting, professional advertising shot, square 1:1`;
+    ? `lifestyle commercial photography of the ${kitQty}-unit kit of ${prodName} in real everyday usage scenario, aesthetically pleasing background, warm natural lighting, professional advertising shot, square 1:1, ${noWatermark}`
+    : `lifestyle commercial photography of ${prodName} in real everyday usage scenario, aesthetically pleasing background, warm natural lighting, professional advertising shot, square 1:1, ${noWatermark}`;
 
-  return [
+  const escalaPrompt = isKit
+    ? `commercial product photography of the ${kitQty}-unit pack of ${prodName} placed next to a common reference object (ruler or standard coin) for size and scale comparison, pure white background #FFFFFF, studio lighting, sharp focus, square 1:1 format, ${noWatermark}`
+    : `commercial product photography of ${prodName} placed next to a common reference object (ruler or standard coin) for size and scale comparison, pure white background #FFFFFF, studio lighting, sharp focus, square 1:1 format, ${noWatermark}`;
+
+  const conteudoPrompt = isKit
+    ? `flat lay top-down commercial photography showing all ${kitQty} items and accessories included in the package of ${prodName} neatly arranged and symmetrically organized, pure white background #FFFFFF, studio lighting, square 1:1 format, ${noWatermark}`
+    : `flat lay top-down commercial photography showing the product ${prodName} and everything included in the retail package neatly organized, pure white background #FFFFFF, studio lighting, square 1:1 format, ${noWatermark}`;
+
+  const festaPrompt = isKit
+    ? `lifestyle commercial photography of the ${kitQty}-unit set of ${prodName} displayed in a festive birthday party table, buffet celebration or decorative dessert setting, warm natural lighting, festive aesthetics, professional advertising shot, square 1:1, ${noWatermark}`
+    : `lifestyle commercial photography of ${prodName} displayed in a festive birthday party table, buffet celebration or decorative dessert setting, warm natural lighting, festive aesthetics, professional advertising shot, square 1:1, ${noWatermark}`;
+
+  const list: ImageBrief[] = [
     {
       tipo: "principal",
       titulo: isKit ? `Foto Principal do Kit (${kitQty} Unidades - Fundo Branco)` : "Foto Principal (Fundo Branco #FFFFFF)",
@@ -134,7 +154,50 @@ function defaultImagesForProduct(input: ProductInput, name: string): ImageBrief[
       prompt: contextoPrompt,
       observacoes: "Foto humanizada demonstrando o produto em uso real para gerar conexão emocional",
     },
+    {
+      tipo: "escala",
+      titulo: "Foto com Referência de Tamanho (Escala)",
+      prompt: escalaPrompt,
+      observacoes: "Mostra o produto ao lado de objeto comum (régua/moeda) para evitar dúvidas de tamanho",
+    },
+    {
+      tipo: "conteudo",
+      titulo: isKit ? `Flat Lay do Kit (${kitQty} Unidades)` : "Flat Lay do Conteúdo da Embalagem",
+      prompt: conteudoPrompt,
+      observacoes: "Visão aérea superior exibindo todos os itens que acompanham a embalagem",
+    },
+    {
+      tipo: "festa",
+      titulo: "Foto Ambientada em Decoração / Festa",
+      prompt: festaPrompt,
+      observacoes: "Ambientação temática em mesa de festa/decoração para alta conversão em marketplace",
+    },
   ];
+
+  // 3.3 Banner de Variações (apenas se houver mais de 1 variação SKU)
+  const variacoes = raw?.variacoesSku || [];
+  if (variacoes.length > 1) {
+    const varNames = variacoes.map((v) => v.variacao).join(", ");
+    list.push({
+      tipo: "variacoes",
+      titulo: `Banner de Variações (${variacoes.length} Opções)`,
+      prompt: `commercial product comparison banner displaying ${variacoes.length} different color and size variations of ${prodName} (${varNames}) arranged neatly side by side, clean studio lighting, pure white background #FFFFFF, square 1:1 format, ${noWatermark}`,
+      observacoes: `Banner exibindo as ${variacoes.length} variações disponíveis (${varNames})`,
+    });
+  }
+
+  // 3.5 Diagrama de Medidas (apenas se as dimensões forem confirmadas)
+  const dimVal = input.dimensions || (raw?.fichaTecnica as Record<string, Field> | undefined)?.["Dimensões"]?.value;
+  if (dimVal && dimVal !== NAO_IDENTIFICADO && !dimVal.toLowerCase().includes("não identificado")) {
+    list.push({
+      tipo: "medidas",
+      titulo: "Diagrama Técnico com Medidas Reais",
+      prompt: `technical product diagram of ${prodName} with clean dimension measurement arrows indicating height, width and depth labeled with the exact confirmed dimensions: ${dimVal}, clean minimal line-art overlay over the real product, pure white background #FFFFFF, square 1:1 format, ${noWatermark}`,
+      observacoes: `Diagrama visual com cotas de medidas confirmadas (${dimVal})`,
+    });
+  }
+
+  return list;
 }
 
 function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
@@ -161,11 +224,28 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
     variacoes: [],
   };
 
-  const ncmValue =
+  const rawNcm =
     raw.ncm ||
     (ficha["NCM"]?.value !== NAO_IDENTIFICADO ? ficha["NCM"]?.value : "") ||
     input.ncm ||
     "";
+
+  // Validação oficial do NCM com a tabela Receita Federal / Siscomex
+  const ncmValidation = validarNcmOficial(rawNcm);
+  const ncmValue = ncmValidation.codigoFormatado || rawNcm;
+  const alertas = [...(raw.alertas ?? [])];
+
+  if (ncmValidation.valido) {
+    ficha["NCM"] = {
+      value: ncmValidation.codigoFormatado,
+      source: "pesquisa",
+      note: `NCM oficial confirmado: ${ncmValidation.descricaoOficial?.slice(0, 100)}...`,
+    };
+  } else if (rawNcm && rawNcm !== NAO_IDENTIFICADO) {
+    if (ncmValidation.aviso && !alertas.includes(ncmValidation.aviso)) {
+      alertas.push(ncmValidation.aviso);
+    }
+  }
 
   const eanValue =
     raw.ean ||
@@ -177,7 +257,7 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
   const cleanTituloMl = deduplicateWords(raw.tituloMercadoLivre ?? input.basicName);
 
   const rawImgs = (raw.imagens ?? []) as ImageBrief[];
-  const defaultImgs = defaultImagesForProduct(input, cleanNomeInterno);
+  const defaultImgs = defaultImagesForProduct(input, cleanNomeInterno, raw);
   const mergedImagens: ImageBrief[] = [];
 
   for (const def of defaultImgs) {
@@ -205,6 +285,8 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
     tituloMercadoLivre: cleanTituloMl,
     kitQuantity: input.kitQuantity || raw.kitQuantity || 1,
     ncm: ncmValue,
+    ncmValidado: ncmValidation.valido,
+    ncmDescricaoOficial: ncmValidation.descricaoOficial,
     ean: eanValue,
     descricao: raw.descricao ?? "",
     palavrasChave: {
@@ -214,10 +296,11 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
     },
     fichaTecnica: ficha,
     caracteristicas: raw.caracteristicas ?? [],
-    alertas: raw.alertas ?? [],
+    alertas,
     imagens: mergedImagens,
   };
 }
+
 
 function buildSearchReferences(
   id: Identificacao,
@@ -544,7 +627,12 @@ export async function buildListing(input: ProductInput, customKeys?: string[]): 
       },
     ];
 
-    const rawListing = await chatJson<Partial<Listing>>(listingMessages, undefined, customKeys);
+    const rawListing = await chatJson<Partial<Listing>>(
+      listingMessages,
+      undefined,
+      customKeys,
+      0.4,
+    );
     const listing = normalize(rawListing, input);
 
     // Vincula os dados estruturados da identificação, referências e plano de imagem
