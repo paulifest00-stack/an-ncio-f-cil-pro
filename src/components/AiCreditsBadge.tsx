@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   Info,
+  Key,
   Loader2,
   RefreshCw,
   Sliders,
@@ -11,6 +12,8 @@ import {
   Zap,
 } from "lucide-react";
 import { checkAiStatus, type AiStatusResult } from "@/lib/ai/credits.functions";
+import { getUserApiKeys } from "@/lib/ai/user-keys";
+import { AiKeyManagerModal } from "@/components/AiKeyManagerModal";
 import {
   getMonthlyQuota,
   setMonthlyQuota,
@@ -45,12 +48,17 @@ export function AiCreditsBadge() {
   const [loading, setLoading] = useState(false);
   const [usage, setUsage] = useState<UsageSummary>(usageSummary());
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [keyModalOpen, setKeyModalOpen] = useState(false);
   const [customQuota, setCustomQuota] = useState<number>(getMonthlyQuota());
 
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      setState(await checkAiStatus());
+      setState(
+        await checkAiStatus({
+          data: { customKeys: getUserApiKeys() },
+        }),
+      );
     } finally {
       setLoading(false);
     }
@@ -61,11 +69,17 @@ export function AiCreditsBadge() {
     const sync = () => {
       setUsage(usageSummary());
       setCustomQuota(getMonthlyQuota());
+      void refresh();
     };
     sync();
     window.addEventListener("af:usage", sync);
-    return () => window.removeEventListener("af:usage", sync);
+    window.addEventListener("af:keys-updated", sync);
+    return () => {
+      window.removeEventListener("af:usage", sync);
+      window.removeEventListener("af:keys-updated", sync);
+    };
   }, [refresh]);
+
 
   const handleSaveQuota = () => {
     setMonthlyQuota(customQuota);
@@ -221,11 +235,41 @@ export function AiCreditsBadge() {
             </div>
           </div>
 
-          {state && state.message ? (
-            <p className="rounded-lg bg-muted/50 p-2 text-[11px] text-muted-foreground">
-              {state.message}
-            </p>
-          ) : null}
+          {state && (
+            <div className="rounded-lg bg-muted/50 p-2.5 text-[11px] text-muted-foreground space-y-1">
+              <div className="flex items-center justify-between text-foreground font-medium">
+                <span className="flex items-center gap-1.5">
+                  <Zap className="size-3 text-primary" />
+                  {state.totalKeys && state.totalKeys > 1
+                    ? `Pool Ativo (${state.totalKeys} Chaves)`
+                    : "Chave Ativa"}
+                </span>
+                {state.activeKeyId && (
+                  <span className="font-mono text-[10px] bg-background/80 px-1.5 py-0.5 rounded border border-border">
+                    {state.activeKeyId}
+                  </span>
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground">{state.message}</p>
+            </div>
+          )}
+
+          {/* Botão de Gerenciamento de Chaves de IA */}
+          <div className="border-t border-border pt-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPopoverOpen(false);
+                setKeyModalOpen(true);
+              }}
+              className="w-full justify-center gap-2 rounded-xl text-xs font-semibold h-8 border-primary/30 hover:bg-primary/10 hover:text-primary transition-all"
+            >
+              <Key className="size-3.5 text-primary" />
+              <span>Gerenciar Chaves de API de IA</span>
+            </Button>
+          </div>
 
           {/* Ajuste do Limite / Quota Estimada */}
           <div className="border-t border-border pt-3">
@@ -249,11 +293,14 @@ export function AiCreditsBadge() {
               </div>
             </div>
             <p className="mt-1 text-[10px] text-muted-foreground">
-              Serve como referência visual para não estourar seus créditos.
+              Fallback automático habilitado para todas as chaves cadastradas.
             </p>
           </div>
         </div>
       </PopoverContent>
+
+      <AiKeyManagerModal open={keyModalOpen} onOpenChange={setKeyModalOpen} />
     </Popover>
   );
 }
+

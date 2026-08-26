@@ -21,17 +21,33 @@ const productInputSchema = z.object({
 
 export const quickScanPhoto = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
-    z.object({ photoDataUrl: z.string().min(10) }).parse(data),
+    z
+      .object({
+        photoDataUrl: z.string().min(10),
+        customKeys: z.array(z.string()).optional(),
+      })
+      .parse(data),
   )
   .handler(async ({ data }) => {
     const { scanProductPhoto } = await import("./listing.server");
-    return scanProductPhoto(data.photoDataUrl);
+    return scanProductPhoto(data.photoDataUrl, data.customKeys);
   });
 
 export const generateListing = createServerFn({ method: "POST" })
-  .validator((data: unknown) => productInputSchema.parse(data))
+  .validator((data: unknown) =>
+    z
+      .object({
+        data: productInputSchema,
+        customKeys: z.array(z.string()).optional(),
+      })
+      .or(productInputSchema)
+      .parse(data),
+  )
   .handler(async ({ data }) => {
     const { buildListing } = await import("./listing.server");
+    if ("data" in data) {
+      return buildListing(data.data as ProductInput, data.customKeys);
+    }
     return buildListing(data as ProductInput);
   });
 
@@ -50,6 +66,7 @@ export const regenerateSection = createServerFn({ method: "POST" })
         ]),
         input: productInputSchema,
         listing: z.any(),
+        customKeys: z.array(z.string()).optional(),
       })
       .parse(data),
   )
@@ -59,16 +76,23 @@ export const regenerateSection = createServerFn({ method: "POST" })
       data.section as ListingSection,
       data.input as ProductInput,
       data.listing as Listing,
+      data.customKeys,
     );
   });
 
 export const generateAdImage = createServerFn({ method: "POST" })
   .validator((data: unknown) =>
-    z.object({ prompt: z.string().min(5), photoDataUrl: z.string().min(10) }).parse(data),
+    z
+      .object({
+        prompt: z.string().min(5),
+        photoDataUrl: z.string().min(10),
+        customKeys: z.array(z.string()).optional(),
+      })
+      .parse(data),
   )
   .handler(async ({ data }) => {
     const { renderAdImage } = await import("./listing.server");
-    return renderAdImage(data.prompt, data.photoDataUrl);
+    return renderAdImage(data.prompt, data.photoDataUrl, data.customKeys);
   });
 
 export const convertToKitServer = createServerFn({ method: "POST" })
@@ -78,6 +102,7 @@ export const convertToKitServer = createServerFn({ method: "POST" })
         targetKitQuantity: z.number().min(1),
         input: productInputSchema,
         listing: z.any(),
+        customKeys: z.array(z.string()).optional(),
       })
       .parse(data),
   )
@@ -87,7 +112,9 @@ export const convertToKitServer = createServerFn({ method: "POST" })
       data.targetKitQuantity,
       data.input as ProductInput,
       data.listing as Listing,
+      data.customKeys,
     );
   });
+
 
 

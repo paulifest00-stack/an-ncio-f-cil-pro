@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { quickScanPhoto } from "@/lib/ai/product.functions";
+import { getUserApiKeys } from "@/lib/ai/user-keys";
 import { generateValidEan13 } from "@/lib/ean";
 import type { Identificacao, ProductInput } from "@/lib/ai/types";
 
@@ -70,7 +71,10 @@ export function NewProductForm({
     setScanSuccessMsg(null);
     try {
       const res = (await quickScanPhoto({
-        data: { photoDataUrl: compressedDataUrl },
+        data: { 
+          photoDataUrl: compressedDataUrl,
+          customKeys: getUserApiKeys(),
+        },
       })) as {
         identificacao?: Identificacao;
         sugestoes?: {

@@ -296,6 +296,7 @@ function buildSearchReferences(
 
 export async function scanProductPhoto(
   photoDataUrl: string,
+  customKeys?: string[],
 ): Promise<{
   identificacao: Identificacao;
   sugestoes: {
@@ -337,7 +338,7 @@ export async function scanProductPhoto(
   let scanStatus: "ok" | "sem_creditos" | "error" = "ok";
 
   try {
-    idResult = await chatJson<Identificacao>(idMessages);
+    idResult = await chatJson<Identificacao>(idMessages, undefined, customKeys);
   } catch (err) {
     console.error("Erro no escaneamento rápido da foto:", err);
     const msg = err instanceof Error ? err.message : String(err);
@@ -394,7 +395,7 @@ export async function scanProductPhoto(
   };
 }
 
-export async function buildListing(input: ProductInput): Promise<Listing> {
+export async function buildListing(input: ProductInput, customKeys?: string[]): Promise<Listing> {
   try {
     let idResult: Identificacao;
 
@@ -431,8 +432,9 @@ export async function buildListing(input: ProductInput): Promise<Listing> {
       ];
 
       try {
-        idResult = await chatJson<Identificacao>(idMessages);
+        idResult = await chatJson<Identificacao>(idMessages, undefined, customKeys);
       } catch (err) {
+
         console.error("Erro no Passo 1 de identificação:", err);
         idResult = {
           produto: input.basicName,
@@ -484,7 +486,7 @@ export async function buildListing(input: ProductInput): Promise<Listing> {
 
     let planResult: ImagePlan;
     try {
-      planResult = await chatJson<ImagePlan>(planMessages);
+      planResult = await chatJson<ImagePlan>(planMessages, undefined, customKeys);
       // Assegura que o layout e cor de acento coincidam ou respeitem a proporção
       if (!planResult.corAcento || planResult.corAcento === "#000000") {
         planResult.corAcento = idResult.corAcento || "#141414";
@@ -542,7 +544,7 @@ export async function buildListing(input: ProductInput): Promise<Listing> {
       },
     ];
 
-    const rawListing = await chatJson<Partial<Listing>>(listingMessages);
+    const rawListing = await chatJson<Partial<Listing>>(listingMessages, undefined, customKeys);
     const listing = normalize(rawListing, input);
 
     // Vincula os dados estruturados da identificação, referências e plano de imagem
@@ -599,6 +601,7 @@ export async function regenerate(
   section: ListingSection,
   input: ProductInput,
   listing: Listing,
+  customKeys?: string[],
 ): Promise<Partial<Listing>> {
   const key = SECTION_LABEL[section];
   try {
@@ -630,7 +633,7 @@ export async function regenerate(
           { type: "image_url", image_url: { url: input.photoDataUrl } },
         ],
       },
-    ]);
+    ], undefined, customKeys);
 
     if (section === "fichaTecnica") {
       const ficha: Record<string, Field> = {};
@@ -666,17 +669,19 @@ export async function regenerate(
 export async function renderAdImage(
   prompt: string,
   photoDataUrl: string,
+  customKeys?: string[],
 ): Promise<string> {
   // Se o prompt já for o do infográfico (já estruturado com regras 1:1 e layout), envia diretamente
   const isInfographic = prompt.includes("infographic image") || prompt.includes("RULES FOR ALL LAYOUTS");
   const finalPrompt = isInfographic ? prompt : photoImagePrompt(prompt);
-  return generateImage(finalPrompt, photoDataUrl);
+  return generateImage(finalPrompt, photoDataUrl, customKeys);
 }
 
 export async function transformListingToKit(
   targetKitQuantity: number,
   input: ProductInput,
   currentListing: Listing,
+  customKeys?: string[],
 ): Promise<Listing> {
   const updatedInput: ProductInput = {
     ...input,
@@ -729,8 +734,9 @@ export async function transformListingToKit(
 
   let raw: Partial<Listing>;
   try {
-    raw = await chatJson<Partial<Listing>>(promptMessages);
+    raw = await chatJson<Partial<Listing>>(promptMessages, undefined, customKeys);
   } catch (err) {
+
     console.error("Erro ao converter anúncio para kit via IA, aplicando transformação determinística:", err);
     raw = {
       tituloMercadoLivre: isKit

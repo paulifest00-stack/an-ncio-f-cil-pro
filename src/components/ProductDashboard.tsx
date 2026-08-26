@@ -54,6 +54,7 @@ import {
   regenerateSection,
   convertToKitServer,
 } from "@/lib/ai/product.functions";
+import { getUserApiKeys } from "@/lib/ai/user-keys";
 import { registerUsage } from "@/lib/usage";
 import { formatEan13, generateValidEan13, validateEan13 } from "@/lib/ean";
 import { saveProductToHistory } from "@/components/RecentListings";
@@ -115,11 +116,12 @@ function CopyButton({
 
 const TABS = [
   { id: "ml", label: "Mercado Livre", icon: ShoppingCart },
-  { id: "bling", label: "Bling ERP", icon: Building2 },
+  { id: "bling", label: "Bling ERP", icon: Layers },
   { id: "resumo", label: "Visão Geral", icon: Package },
   { id: "imagens", label: "Imagens 1:1", icon: ImageIcon },
   { id: "referencias", label: "Referências Web", icon: Globe },
 ] as const;
+
 
 type TabId = (typeof TABS)[number]["id"];
 
@@ -175,7 +177,12 @@ export function ProductDashboard({
     setError(null);
     try {
       const result = await regenerateSection({
-        data: { section, input: { ...input, kitQuantity: listing.kitQuantity }, listing },
+        data: {
+          section,
+          input: { ...input, kitQuantity: listing.kitQuantity },
+          listing,
+          customKeys: getUserApiKeys(),
+        },
       });
       registerUsage("texto");
       patch(result as Partial<Listing>);
@@ -190,7 +197,11 @@ export function ProductDashboard({
     setImageState((s) => ({ ...s, [index]: { loading: true } }));
     try {
       const url = await generateAdImage({
-        data: { prompt: brief.prompt, photoDataUrl: input.photoDataUrl },
+        data: {
+          prompt: brief.prompt,
+          photoDataUrl: input.photoDataUrl,
+          customKeys: getUserApiKeys(),
+        },
       });
       registerUsage("imagem");
       setImageState((s) => ({ ...s, [index]: { loading: false, url } }));
@@ -253,6 +264,7 @@ export function ProductDashboard({
           targetKitQuantity: newQty,
           input: { ...input, kitQuantity: newQty },
           listing,
+          customKeys: getUserApiKeys(),
         },
       });
       registerUsage("texto");

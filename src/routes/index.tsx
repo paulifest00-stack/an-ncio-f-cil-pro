@@ -8,6 +8,7 @@ import { NewProductForm } from "@/components/NewProductForm";
 import { Processing } from "@/components/Processing";
 import { ProductDashboard } from "@/components/ProductDashboard";
 import { generateListing } from "@/lib/ai/product.functions";
+import { getUserApiKeys } from "@/lib/ai/user-keys";
 import type { Listing, ProductInput } from "@/lib/ai/types";
 import { registerUsage } from "@/lib/usage";
 
@@ -46,7 +47,12 @@ function Index() {
     setStage("processing");
     setError(null);
     try {
-      const result = await generateListing({ data });
+      const result = await generateListing({
+        data: {
+          data,
+          customKeys: getUserApiKeys(),
+        },
+      });
       registerUsage("texto");
       const generated = result as Listing;
       setListing(generated);
@@ -57,6 +63,7 @@ function Index() {
       setError(e instanceof Error ? e.message : "Falha ao gerar o anúncio.");
     }
   };
+
 
   const handleSelectSaved = (saved: { input: ProductInput; listing: Listing }) => {
     setInput(saved.input);
