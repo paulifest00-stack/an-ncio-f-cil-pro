@@ -86,6 +86,7 @@ export function NewProductForm({
           JSON.stringify({
             basicName,
             photo,
+            mode,
             isKitMode,
             kitQuantity,
             optional,
@@ -96,7 +97,7 @@ export function NewProductForm({
     } catch {
       // ignore
     }
-  }, [basicName, photo, isKitMode, kitQuantity, optional, cachedIdentificacao]);
+  }, [basicName, photo, mode, isKitMode, kitQuantity, optional, cachedIdentificacao]);
 
   const setField = (key: string, value: string) =>
     setOptional((prev) => ({ ...prev, [key]: value }));
