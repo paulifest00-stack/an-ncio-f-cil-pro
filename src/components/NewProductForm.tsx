@@ -7,7 +7,9 @@ import {
   Layers,
   Loader2,
   PackagePlus,
+  ShoppingBag,
   Sparkles,
+  Target,
   Wand2,
   Zap,
 } from "lucide-react";
