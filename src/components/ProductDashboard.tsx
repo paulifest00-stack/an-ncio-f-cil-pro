@@ -555,7 +555,7 @@ export function ProductDashboard({
       <div className="no-scrollbar flex w-full overflow-x-auto rounded-2xl border border-border/80 bg-muted/40 p-1 backdrop-blur-xl">
         <div className="flex w-full min-w-max gap-1">
           {TABS.filter((t) =>
-            mode === "bling" ? t.id === "bling" : mode === "ml" ? t.id !== "bling" : true,
+            input.mode === "bling" ? t.id === "bling" : input.mode === "ml" ? t.id !== "bling" : true,
           ).map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
