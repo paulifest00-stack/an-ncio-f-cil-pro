@@ -371,6 +371,21 @@ export function NewProductForm({
               />
             </div>
 
+            <div className="space-y-1">
+              <Label htmlFor="freeDesc" className="text-xs font-bold text-foreground">
+                Descreva o produto com suas palavras{" "}
+                <span className="font-medium text-muted-foreground">(opcional)</span>
+              </Label>
+              <Textarea
+                id="freeDesc"
+                value={optional["other"] ?? ""}
+                placeholder="Fale naturalmente: para que serve, material, o que vem junto, diferenciais, público… A IA usa isso como informação confiável."
+                onChange={(e) => setField("other", e.target.value)}
+                className="min-h-20 rounded-xl bg-background text-xs sm:text-sm leading-relaxed"
+              />
+            </div>
+
+
             <div className="rounded-2xl border border-border/80 bg-muted/20 p-2.5 sm:p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
