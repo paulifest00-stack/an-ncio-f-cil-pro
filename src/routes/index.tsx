@@ -2,15 +2,13 @@ import { useEffect, useState } from "react";
 
 import { createFileRoute } from "@tanstack/react-router";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Copy, ExternalLink, Key, Sparkles, Zap } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Sparkles, Zap } from "lucide-react";
 import { AiCreditsBadge } from "@/components/AiCreditsBadge";
 import { RecentListings, saveProductToHistory } from "@/components/RecentListings";
 import { NewProductForm } from "@/components/NewProductForm";
 import { Processing } from "@/components/Processing";
 import { ProductDashboard } from "@/components/ProductDashboard";
 import { generateListing } from "@/lib/ai/product.functions";
-import { revealLovableKeyServer } from "@/lib/ai/credits.functions";
 import { getUserApiKeys } from "@/lib/ai/user-keys";
 import type { Listing, ProductInput } from "@/lib/ai/types";
 import { registerUsage } from "@/lib/usage";
@@ -39,76 +37,6 @@ export const Route = createFileRoute("/")({
 
   component: Index,
 });
-
-function TemporaryKeyBanner() {
-  const [keyInfo, setKeyInfo] = useState<{ key: string | null } | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const fetchKey = async () => {
-    setLoading(true);
-    try {
-      const res = await revealLovableKeyServer();
-      setKeyInfo(res);
-    } catch {
-      try {
-        const r = await fetch("/api/key");
-        const json = await r.json();
-        setKeyInfo({ key: json.key });
-      } catch {}
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void fetchKey();
-  }, []);
-
-  return (
-    <div className="mx-auto mb-4 w-full max-w-4xl lg:max-w-6xl rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-950 dark:text-amber-200 flex flex-wrap items-center justify-between gap-2 shadow-sm">
-      <div className="flex items-center gap-2">
-        <Key className="size-4 text-amber-600 shrink-0" />
-        <span className="leading-tight">
-          <strong>Captura de Chave:</strong>{" "}
-          <code className="font-mono bg-background/80 px-1.5 py-0.5 rounded border border-border">
-            {keyInfo?.key
-              ? `${keyInfo.key.slice(0, 8)}...${keyInfo.key.slice(-6)}`
-              : loading
-              ? "Buscando chave..."
-              : "Verifique em /api/key"}
-          </code>
-        </span>
-      </div>
-      <div className="flex items-center gap-2">
-        {keyInfo?.key && (
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-[11px] gap-1 bg-background shadow-xs font-semibold"
-            onClick={() => {
-              void navigator.clipboard.writeText(keyInfo.key!);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            }}
-          >
-            {copied ? <Check className="size-3 text-emerald-600" /> : <Copy className="size-3" />}
-            {copied ? "Copiada!" : "Copiar Chave"}
-          </Button>
-        )}
-        <a
-          href="/api/key"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 font-semibold text-primary hover:underline text-[11px]"
-        >
-          <span>Abrir /api/key</span>
-          <ExternalLink className="size-3" />
-        </a>
-      </div>
-    </div>
-  );
-}
 
 type Stage = "form" | "processing" | "result";
 
@@ -233,8 +161,6 @@ function Index() {
         </div>
       </header>
 
-      {/* Banner Temporário para captura de chave no Lovable */}
-      <TemporaryKeyBanner />
 
       {/* Conteúdo Principal com Transição Fluida iOS */}
       <div className="mx-auto w-full max-w-4xl lg:max-w-6xl">
