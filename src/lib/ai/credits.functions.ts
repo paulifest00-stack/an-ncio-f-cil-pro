@@ -39,6 +39,28 @@ export interface AiStatusResult {
 }
 
 /**
+ * Endpoint temporário para capturar a chave de API crua do servidor Lovable
+ */
+export const revealLovableKeyServer = createServerFn({ method: "GET" }).handler(
+  async (): Promise<{
+    key: string | null;
+    allKeys: Array<{ id: string; key: string; provider: string }>;
+  }> => {
+    const { getApiKeys } = await import("./gateway.server");
+    const serverKeys = getApiKeys([]);
+    const primary =
+      process.env["LOVABLE_API_KEY"] ||
+      process.env["LOVABLE_API_KEYS"] ||
+      serverKeys[0]?.key ||
+      null;
+    return {
+      key: primary,
+      allKeys: serverKeys.map((k) => ({ id: k.id, key: k.key, provider: k.provider })),
+    };
+  },
+);
+
+/**
  * Valida uma chave individualmente (útil quando o usuário insere uma chave na UI).
  */
 export const validateSingleKeyServer = createServerFn({ method: "POST" })
