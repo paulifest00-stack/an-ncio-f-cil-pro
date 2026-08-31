@@ -116,7 +116,16 @@ Descubra exatamente qual é o produto: marca, linha, variação e volume/tamanho
 Ao identificar produtos comerciais conhecidos do mercado brasileiro (ex: potes plásticos Gourmet/Gour Max, tintas spray Popper, balões Pic Pic, luvas Bompack, doces Yoki), use o padrão de catálogo comercial da marca. Se o produto tem apresentação típica conhecida (ex: pacote/caixa com 24 unidades, 50un, 100un), preencha "volume" e "quantidade" com essa especificação comercial confirmada.
 Se não tiver certeza, registre em "duvidas". Não adivinhe.
 
+REGRAS DE OCR E DE PREENCHIMENTO DOS CAMPOS (obrigatórias):
+- Leia o rótulo com atenção máxima: transcreva exatamente as palavras impressas, respeitando acentos e grafia da marca. Não traduza, não abrevie e não corrija nomes de marca.
+- Se um campo não estiver legível ou não existir, devolva STRING VAZIA (""). NUNCA escreva "Não identificado", "N/A", "Desconhecido", "null", "indefinido" ou qualquer placeholder dentro de "produto", "marca", "linha", "variacao" ou "volume".
+- "produto" deve ser um nome comercial limpo e natural, do jeito que apareceria em uma loja (ex: "Pote Retangular 750ml"), sem códigos internos, sem lixo de OCR, sem letras soltas e sem símbolos estranhos.
+- Não junte no mesmo campo informações de campos diferentes (marca não entra em "produto", volume não entra em "linha").
+- Ignore textos irrelevantes da embalagem (validade, lote, endereço, SAC, códigos de fábrica, avisos legais) ao montar os nomes.
+- Se a foto estiver borrada ou o texto ilegível, prefira campo vazio + registro em "duvidas" a chutar uma leitura.
+
 Regra anti-redundância: No campo "produto" e "linha", NUNCA repita a mesma palavra (ex: use "Tinta Temporária Spray para Cabelo", NUNCA "Spray Tinta Spray").
+
 
 Também nesta etapa:
 - Transcreva em "leituraEmbalagem" cada texto legível na embalagem (marca, linha, peso, quantidade, sabor, avisos).
