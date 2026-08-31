@@ -349,3 +349,30 @@ export function photoImagePrompt(prompt: string): string {
   ].join("\n");
 }
 
+
+/* ───────────────── MODO ECONÔMICO — SOMENTE BLING ───────────────── */
+
+export const SCHEMA_BLING = `
+${REGRAS_SKU}
+
+MODO CADASTRO SOMENTE BLING (ERP): gere APENAS o essencial de cadastro interno. Não escreva descrição de marketing longa, não gere palavras-chave de SEO e não gere prompts de imagem.
+
+Responda SOMENTE com JSON válido neste formato:
+{
+  "resumo": "1 a 2 frases sobre o que foi confirmado",
+  "sku": "SKU principal seguindo as regras",
+  "skuPai": "SKU Pai da família",
+  "skuFilho": "SKU Filho com variação (ou igual ao Pai se não houver)",
+  "variacoesSku": [ { "variacao": "", "sku": "", "ean": "" } ],
+  "nomeInterno": "NOME CURTO E LIMPO PARA CADASTRO NO BLING, INTEIRAMENTE EM LETRAS MAIÚSCULAS (CAPS LOCK), SEM REPETIR PALAVRAS E SEM PLACEHOLDERS",
+  "ncm": "0000.00.00",
+  "ean": "EAN-13 se visível ou informado",
+  "fichaTecnica": {
+    "Produto": { "value": "", "source": "usuario|imagem|pesquisa|nao_encontrado" },
+    "Marca": {}, "Categoria": {}, "NCM": {}, "EAN": {}, "Peso": {}, "Dimensões": {}, "Quantidade": {}, "Material": {}, "Cor": {}, "Fabricante": {}
+  },
+  "alertas": []
+}
+Campos da ficha sem informação: {"value": "Não identificado", "source": "nao_encontrado"}.
+Responda apenas com o JSON válido, sem texto antes ou depois.
+`.trim();
