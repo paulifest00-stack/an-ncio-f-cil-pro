@@ -281,8 +281,9 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
     input.ean ||
     "";
 
-  const cleanNomeInterno = deduplicateWords(raw.nomeInterno ?? input.basicName);
+  const cleanNomeInterno = deduplicateWords(raw.nomeInterno ?? input.basicName).toUpperCase();
   const cleanTituloMl = deduplicateWords(raw.tituloMercadoLivre ?? input.basicName);
+
 
   const rawImgs = (raw.imagens ?? []) as ImageBrief[];
   const defaultImgs = defaultImagesForProduct(input, cleanNomeInterno, raw);
