@@ -286,7 +286,7 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
 
 
   const rawImgs = (raw.imagens ?? []) as ImageBrief[];
-  const defaultImgs = defaultImagesForProduct(input, cleanNomeInterno, raw);
+  const defaultImgs = defaultImagesForProduct(input, cleanTituloMl || cleanNomeInterno, raw);
   const mergedImagens: ImageBrief[] = [];
 
   for (const def of defaultImgs) {
