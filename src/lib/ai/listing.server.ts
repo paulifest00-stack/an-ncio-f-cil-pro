@@ -477,7 +477,13 @@ export async function scanProductPhoto(
     };
   }
 
-  // Monta sugestões limpas para pré-preenchimento sem duplicações
+  // Monta sugestões limpas para pré-preenchimento sem duplicações nem lixo de OCR
+  idResult.produto = sanitizeName(idResult.produto || "");
+  idResult.marca = sanitizeName(idResult.marca || "");
+  idResult.linha = sanitizeName(idResult.linha || "");
+  idResult.variacao = sanitizeName(idResult.variacao || "");
+  idResult.volume = sanitizeName(idResult.volume || "");
+
   const rawParts = [
     idResult.marca,
     idResult.produto,
@@ -501,6 +507,7 @@ export async function scanProductPhoto(
       packaging: idResult.linha || undefined,
       ean: eanMatch ? eanMatch.replace(/\D/g, "") : undefined,
     },
+
     error: scanError,
     status: scanStatus,
     hasContent,
