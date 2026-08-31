@@ -181,7 +181,7 @@ Responda SOMENTE com JSON válido neste formato:
   "variacoesSku": [
     { "variacao": "Nome da variação (ex: Azul, 250ml, Tam M)", "sku": "SKU filho correspondente (ex: POPTPC150-AZ)", "ean": "código EAN-13 se aplicável" }
   ],
-  "nomeInterno": "nome curto e limpo para cadastro interno no Bling, sem termos de busca SEO e SEM repetições de palavras (ex: Spray Pinta Cabelo Popper 150ml Azul)",
+  "nomeInterno": "nome curto e limpo para cadastro interno no Bling, ESCRITO INTEIRAMENTE EM LETRAS MAIÚSCULAS (CAPS LOCK), sem termos de busca SEO e SEM repetições de palavras (ex: SPRAY PINTA CABELO POPPER 150ML AZUL). Nunca inclua placeholders como 'Não identificado' no nome.",
   "tituloMercadoLivre": "título de alta conversão para o Mercado Livre, natural e persuasivo, até 60 caracteres, apenas com dados confirmados. REGRA ABSOLUTA: NUNCA repita a mesma palavra no título (ex: evite repetir 'Spray' no início e no fim).",
   "ncm": "código fiscal NCM exato com 8 dígitos formatado como 0000.00.00 (pesquise a classificação fiscal oficial do Mercosul baseada na categoria e composição do produto)",
   "ean": "código de barras EAN-13 (13 dígitos numéricos) se visível no produto ou informado pelo usuário",
