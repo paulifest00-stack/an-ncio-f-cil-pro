@@ -578,60 +578,68 @@ export async function buildListing(input: ProductInput, customKeys?: string[]): 
     // Monta as referências de busca na internet
     const referencias = buildSearchReferences(idResult, input);
 
-    // ETAPA 2 & 3: Levantamento de pontos de quebra de objeções e plano de layout
-    const planMessages: ChatMessage[] = [
-      {
-        role: "system",
-        content: `Você é um especialista em design de anúncios de alta conversão para marketplace.\n${REGRA_OURO}`,
-      },
-      {
-        role: "user",
-        content: [
-          {
-            type: "text",
-            text: [
-              identificacaoBlock(idResult),
-              "",
-              "Dados do usuário:",
-              userDataBlock(input) || "- (somente foto e nome básico)",
-              "",
-              PASSO2_PONTOS,
-            ].join("\n"),
-          },
-          { type: "image_url", image_url: { url: input.photoDataUrl } },
-        ],
-      },
-    ];
+    // Modo econômico: no cadastro só do Bling não precisamos de plano de infográfico nem prompts de imagem
+    const blingOnly = input.mode === "bling";
 
-    let planResult: ImagePlan;
-    try {
-      planResult = await chatJson<ImagePlan>(planMessages, undefined, customKeys);
-      // Assegura que o layout e cor de acento coincidam ou respeitem a proporção
-      if (!planResult.corAcento || planResult.corAcento === "#000000") {
-        planResult.corAcento = idResult.corAcento || "#141414";
-      }
-    } catch (err) {
-      console.error("Erro no Passo 2/3 de planejamento de imagem:", err);
-      planResult = {
-        proporcao: idResult.proporcao || 1.0,
-        layout: idResult.layout || "C",
-        corAcento: idResult.corAcento || "#141414",
-        titulo: {
-          linha1: idResult.produto || input.basicName,
-          linha2: idResult.linha || idResult.marca || input.brand || "Original",
-          linha3: idResult.volume || "Pronto Entrega",
+    const fallbackPlan: ImagePlan = {
+      proporcao: idResult.proporcao || 1.0,
+      layout: idResult.layout || "C",
+      corAcento: idResult.corAcento || "#141414",
+      titulo: {
+        linha1: idResult.produto || input.basicName,
+        linha2: idResult.linha || idResult.marca || input.brand || "Original",
+        linha3: idResult.volume || "Pronto Entrega",
+      },
+      pontos: [
+        { texto: "PRODUTO 100% ORIGINAL", icone: "shield", fonte: "rótulo" },
+        { texto: "ALTA QUALIDADE E DURABILIDADE", icone: "star", fonte: "rótulo" },
+        { texto: "ENVIO RÁPIDO E SEGURO", icone: "box", fonte: "usuário" },
+        { texto: "PRONTO PARA USO", icone: "check", fonte: "rótulo" },
+      ],
+      naoConfirmado: [],
+    };
+
+    let planResult: ImagePlan = fallbackPlan;
+
+    if (!blingOnly) {
+      // ETAPA 2 & 3: Levantamento de pontos de quebra de objeções e plano de layout
+      const planMessages: ChatMessage[] = [
+        {
+          role: "system",
+          content: `Você é um especialista em design de anúncios de alta conversão para marketplace.\n${REGRA_OURO}`,
         },
-        pontos: [
-          { texto: "PRODUTO 100% ORIGINAL", icone: "shield", fonte: "rótulo" },
-          { texto: "ALTA QUALIDADE E DURABILIDADE", icone: "star", fonte: "rótulo" },
-          { texto: "ENVIO RÁPIDO E SEGURO", icone: "box", fonte: "usuário" },
-          { texto: "PRONTO PARA USO", icone: "check", fonte: "rótulo" },
-        ],
-        naoConfirmado: [],
-      };
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: [
+                identificacaoBlock(idResult),
+                "",
+                "Dados do usuário:",
+                userDataBlock(input) || "- (somente foto e nome básico)",
+                "",
+                PASSO2_PONTOS,
+              ].join("\n"),
+            },
+            { type: "image_url", image_url: { url: input.photoDataUrl } },
+          ],
+        },
+      ];
+
+      try {
+        planResult = await chatJson<ImagePlan>(planMessages, undefined, customKeys);
+        // Assegura que o layout e cor de acento coincidam ou respeitem a proporção
+        if (!planResult.corAcento || planResult.corAcento === "#000000") {
+          planResult.corAcento = idResult.corAcento || "#141414";
+        }
+      } catch (err) {
+        console.error("Erro no Passo 2/3 de planejamento de imagem:", err);
+        planResult = fallbackPlan;
+      }
     }
 
-    // ETAPA 4: Geração do anúncio completo (Mercado Livre + Bling + SKU Pai/Filho)
+    // ETAPA 4: Geração do anúncio (completo, ou enxuto quando for só Bling)
     const listingMessages: ChatMessage[] = [
       {
         role: "system",
@@ -643,19 +651,20 @@ export async function buildListing(input: ProductInput, customKeys?: string[]): 
           {
             type: "text",
             text: [
-              "Gere o anúncio completo e os SKUs padronizados seguindo rigorosamente o esquema abaixo.",
+              blingOnly
+                ? "Gere apenas o cadastro interno para o ERP Bling com os SKUs padronizados, seguindo rigorosamente o esquema abaixo."
+                : "Gere o anúncio completo e os SKUs padronizados seguindo rigorosamente o esquema abaixo.",
               "",
               identificacaoBlock(idResult),
               "",
-              "Plano da Imagem de Objeções gerado:",
-              JSON.stringify(planResult, null, 2),
-              "",
+              ...(blingOnly
+                ? []
+                : ["Plano da Imagem de Objeções gerado:", JSON.stringify(planResult, null, 2), ""]),
               "Dados informados pelo usuário:",
               userDataBlock(input) || "- (somente foto e nome básico)",
               "",
-              IMAGENS_REGRAS,
-              "",
-              SCHEMA,
+              ...(blingOnly ? [] : [IMAGENS_REGRAS, ""]),
+              blingOnly ? SCHEMA_BLING : SCHEMA,
             ].join("\n"),
           },
           { type: "image_url", image_url: { url: input.photoDataUrl } },
@@ -675,23 +684,28 @@ export async function buildListing(input: ProductInput, customKeys?: string[]): 
     listing.identificacao = idResult;
     listing.referencias = referencias;
 
-    // Atualiza ou insere o prompt definitivo da imagem de quebra de objeções
-    const objectionPrompt = objectionImagePrompt(planResult);
-    let objImg = listing.imagens.find((i) => i.tipo === "objecoes");
-    if (!objImg) {
-      objImg = {
-        tipo: "objecoes",
-        titulo: "Arte de Quebra de Objeções (Infográfico)",
-        prompt: objectionPrompt,
-        observacoes: `Layout ${planResult.layout} baseado na proporção ${planResult.proporcao.toFixed(2)}`,
-        plano: planResult,
-      };
-      listing.imagens.push(objImg);
+    if (blingOnly) {
+      // Sem gastar IA em artes: no modo Bling não entregamos briefings de imagem
+      listing.imagens = [];
     } else {
-      objImg.prompt = objectionPrompt;
-      objImg.observacoes = `Layout ${planResult.layout} (Proporção ${planResult.proporcao.toFixed(2)})`;
-      objImg.plano = planResult;
+      // Atualiza ou insere o prompt definitivo da imagem de quebra de objeções
+      const objectionPrompt = objectionImagePrompt(planResult);
+      const objImg = listing.imagens.find((i) => i.tipo === "objecoes");
+      if (!objImg) {
+        listing.imagens.push({
+          tipo: "objecoes",
+          titulo: "Arte de Quebra de Objeções (Infográfico)",
+          prompt: objectionPrompt,
+          observacoes: `Layout ${planResult.layout} baseado na proporção ${planResult.proporcao.toFixed(2)}`,
+          plano: planResult,
+        });
+      } else {
+        objImg.prompt = objectionPrompt;
+        objImg.observacoes = `Layout ${planResult.layout} (Proporção ${planResult.proporcao.toFixed(2)})`;
+        objImg.plano = planResult;
+      }
     }
+
 
     // Se houver dúvidas não confirmadas em idResult ou planResult, anexa aos alertas
     const extraAlerts = [
