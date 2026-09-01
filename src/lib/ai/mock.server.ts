@@ -119,7 +119,7 @@ export function generateMockListing(input: ProductInput): Listing {
   const foundWeight = weight || (weightMatch ? weightMatch[1] : "");
 
   const { sku, skuPai, skuFilho, variacoesSku } = generateSkuPair(name, brand, foundWeight, effectiveKitQty);
-  const nomeInterno = isKit ? `Kit ${effectiveKitQty}x ${name}` : name;
+  const nomeInterno = (isKit ? `Kit ${effectiveKitQty}x ${name}` : name).toUpperCase();
   const tituloMercadoLivre = generateMLTitle(name, brand, effectiveKitQty, foundWeight);
   const generatedEan = userEan || generateValidEan13("789");
   const finalNcm = userNcm || "9617.00.10";
