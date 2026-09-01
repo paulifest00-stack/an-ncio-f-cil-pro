@@ -6,6 +6,8 @@ import {
   REGRA_OURO,
   REGRAS_SKU,
   SCHEMA,
+  SCHEMA_BLING,
+
   identificacaoBlock,
   listingContext,
   objectionImagePrompt,
