@@ -116,7 +116,16 @@ Descubra exatamente qual é o produto: marca, linha, variação e volume/tamanho
 Ao identificar produtos comerciais conhecidos do mercado brasileiro (ex: potes plásticos Gourmet/Gour Max, tintas spray Popper, balões Pic Pic, luvas Bompack, doces Yoki), use o padrão de catálogo comercial da marca. Se o produto tem apresentação típica conhecida (ex: pacote/caixa com 24 unidades, 50un, 100un), preencha "volume" e "quantidade" com essa especificação comercial confirmada.
 Se não tiver certeza, registre em "duvidas". Não adivinhe.
 
+REGRAS DE OCR E DE PREENCHIMENTO DOS CAMPOS (obrigatórias):
+- Leia o rótulo com atenção máxima: transcreva exatamente as palavras impressas, respeitando acentos e grafia da marca. Não traduza, não abrevie e não corrija nomes de marca.
+- Se um campo não estiver legível ou não existir, devolva STRING VAZIA (""). NUNCA escreva "Não identificado", "N/A", "Desconhecido", "null", "indefinido" ou qualquer placeholder dentro de "produto", "marca", "linha", "variacao" ou "volume".
+- "produto" deve ser um nome comercial limpo e natural, do jeito que apareceria em uma loja (ex: "Pote Retangular 750ml"), sem códigos internos, sem lixo de OCR, sem letras soltas e sem símbolos estranhos.
+- Não junte no mesmo campo informações de campos diferentes (marca não entra em "produto", volume não entra em "linha").
+- Ignore textos irrelevantes da embalagem (validade, lote, endereço, SAC, códigos de fábrica, avisos legais) ao montar os nomes.
+- Se a foto estiver borrada ou o texto ilegível, prefira campo vazio + registro em "duvidas" a chutar uma leitura.
+
 Regra anti-redundância: No campo "produto" e "linha", NUNCA repita a mesma palavra (ex: use "Tinta Temporária Spray para Cabelo", NUNCA "Spray Tinta Spray").
+
 
 Também nesta etapa:
 - Transcreva em "leituraEmbalagem" cada texto legível na embalagem (marca, linha, peso, quantidade, sabor, avisos).
@@ -172,7 +181,7 @@ Responda SOMENTE com JSON válido neste formato:
   "variacoesSku": [
     { "variacao": "Nome da variação (ex: Azul, 250ml, Tam M)", "sku": "SKU filho correspondente (ex: POPTPC150-AZ)", "ean": "código EAN-13 se aplicável" }
   ],
-  "nomeInterno": "nome curto e limpo para cadastro interno no Bling, sem termos de busca SEO e SEM repetições de palavras (ex: Spray Pinta Cabelo Popper 150ml Azul)",
+  "nomeInterno": "nome curto e limpo para cadastro interno no Bling, ESCRITO INTEIRAMENTE EM LETRAS MAIÚSCULAS (CAPS LOCK), sem termos de busca SEO e SEM repetições de palavras (ex: SPRAY PINTA CABELO POPPER 150ML AZUL). Nunca inclua placeholders como 'Não identificado' no nome.",
   "tituloMercadoLivre": "título de alta conversão para o Mercado Livre, natural e persuasivo, até 60 caracteres, apenas com dados confirmados. REGRA ABSOLUTA: NUNCA repita a mesma palavra no título (ex: evite repetir 'Spray' no início e no fim).",
   "ncm": "código fiscal NCM exato com 8 dígitos formatado como 0000.00.00 (pesquise a classificação fiscal oficial do Mercosul baseada na categoria e composição do produto)",
   "ean": "código de barras EAN-13 (13 dígitos numéricos) se visível no produto ou informado pelo usuário",
@@ -340,3 +349,30 @@ export function photoImagePrompt(prompt: string): string {
   ].join("\n");
 }
 
+
+/* ───────────────── MODO ECONÔMICO — SOMENTE BLING ───────────────── */
+
+export const SCHEMA_BLING = `
+${REGRAS_SKU}
+
+MODO CADASTRO SOMENTE BLING (ERP): gere APENAS o essencial de cadastro interno. Não escreva descrição de marketing longa, não gere palavras-chave de SEO e não gere prompts de imagem.
+
+Responda SOMENTE com JSON válido neste formato:
+{
+  "resumo": "1 a 2 frases sobre o que foi confirmado",
+  "sku": "SKU principal seguindo as regras",
+  "skuPai": "SKU Pai da família",
+  "skuFilho": "SKU Filho com variação (ou igual ao Pai se não houver)",
+  "variacoesSku": [ { "variacao": "", "sku": "", "ean": "" } ],
+  "nomeInterno": "NOME CURTO E LIMPO PARA CADASTRO NO BLING, INTEIRAMENTE EM LETRAS MAIÚSCULAS (CAPS LOCK), SEM REPETIR PALAVRAS E SEM PLACEHOLDERS",
+  "ncm": "0000.00.00",
+  "ean": "EAN-13 se visível ou informado",
+  "fichaTecnica": {
+    "Produto": { "value": "", "source": "usuario|imagem|pesquisa|nao_encontrado" },
+    "Marca": {}, "Categoria": {}, "NCM": {}, "EAN": {}, "Peso": {}, "Dimensões": {}, "Quantidade": {}, "Material": {}, "Cor": {}, "Fabricante": {}
+  },
+  "alertas": []
+}
+Campos da ficha sem informação: {"value": "Não identificado", "source": "nao_encontrado"}.
+Responda apenas com o JSON válido, sem texto antes ou depois.
+`.trim();

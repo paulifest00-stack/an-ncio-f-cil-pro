@@ -61,9 +61,36 @@ function normalizeField(raw: unknown): Field {
   };
 }
 
+/** Remove lixo de OCR e placeholders ("Não identificado", "N/A", etc.) de nomes. */
+export function sanitizeName(text: string): string {
+  if (!text) return "";
+  let out = text
+    // placeholders inteiros
+    .replace(
+      /\b(n[aã]o\s+identificad[oa]s?|n[aã]o\s+informad[oa]s?|desconhecid[oa]s?|indefinid[oa]s?|sem\s+informa[cç][aã]o|informa[cç][aã]o\s+n[aã]o\s+encontrada|undefined|unknown|null|nan|n\/a|n\.a\.)\b/gi,
+      " ",
+    )
+    // parênteses/colchetes que ficaram vazios
+    .replace(/[([{]\s*[)\]}]/g, " ")
+    // símbolos soltos e pontuação órfã
+    .replace(/[|<>_*#@^~`"']/g, " ")
+    .replace(/\s+[-–—/,;:]+\s*(?=$|[-–—/,;:])/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/^[\s\-–—/,;:.]+|[\s\-–—/,;:.]+$/g, "")
+    .trim();
+
+  // remove tokens de 1 caractere sem sentido (lixo de OCR) preservando números e "e"
+  out = out
+    .split(/\s+/)
+    .filter((w) => w.length > 1 || /[0-9eE]/.test(w))
+    .join(" ");
+
+  return out.trim();
+}
+
 function deduplicateWords(text: string): string {
   if (!text) return "";
-  const words = text.trim().split(/\s+/);
+  const words = sanitizeName(text).trim().split(/\s+/);
   const seen = new Set<string>();
   const clean: string[] = [];
 
@@ -82,8 +109,9 @@ function deduplicateWords(text: string): string {
     }
     clean.push(w);
   }
-  return clean.join(" ");
+  return clean.join(" ").trim();
 }
+
 
 function defaultImagesForProduct(
   input: ProductInput,
@@ -253,11 +281,12 @@ function normalize(raw: Partial<Listing>, input: ProductInput): Listing {
     input.ean ||
     "";
 
-  const cleanNomeInterno = deduplicateWords(raw.nomeInterno ?? input.basicName);
+  const cleanNomeInterno = deduplicateWords(raw.nomeInterno ?? input.basicName).toUpperCase();
   const cleanTituloMl = deduplicateWords(raw.tituloMercadoLivre ?? input.basicName);
 
+
   const rawImgs = (raw.imagens ?? []) as ImageBrief[];
-  const defaultImgs = defaultImagesForProduct(input, cleanNomeInterno, raw);
+  const defaultImgs = defaultImagesForProduct(input, cleanTituloMl || cleanNomeInterno, raw);
   const mergedImagens: ImageBrief[] = [];
 
   for (const def of defaultImgs) {
@@ -448,7 +477,13 @@ export async function scanProductPhoto(
     };
   }
 
-  // Monta sugestões limpas para pré-preenchimento sem duplicações
+  // Monta sugestões limpas para pré-preenchimento sem duplicações nem lixo de OCR
+  idResult.produto = sanitizeName(idResult.produto || "");
+  idResult.marca = sanitizeName(idResult.marca || "");
+  idResult.linha = sanitizeName(idResult.linha || "");
+  idResult.variacao = sanitizeName(idResult.variacao || "");
+  idResult.volume = sanitizeName(idResult.volume || "");
+
   const rawParts = [
     idResult.marca,
     idResult.produto,
@@ -472,6 +507,7 @@ export async function scanProductPhoto(
       packaging: idResult.linha || undefined,
       ean: eanMatch ? eanMatch.replace(/\D/g, "") : undefined,
     },
+
     error: scanError,
     status: scanStatus,
     hasContent,
